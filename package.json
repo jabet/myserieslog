@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "predeploy":"npm run build",
-    "deploy": "gh-pages -d build -r https://$GH_TOKEN@github.com/jabet/myserieslog"
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {
     "@supabase/auth-ui-react": "^0.4.7",
