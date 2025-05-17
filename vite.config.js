@@ -9,6 +9,6 @@ export default defineConfig({
     tailwindcss()
   ],
 
-  "include": ["src", "vite-env.d.ts"]
+  "include": ["src", "vite-env.d.ts"],
 
 })

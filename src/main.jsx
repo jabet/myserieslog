@@ -5,15 +5,16 @@ import "./index.css";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Detalle from "./pages/Detalle.jsx";
 import Login from "./pages/Login.jsx";
+import PreferenciasUsuario from "./pages/PreferenciasUsuario.jsx";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<App />} />
-        <Route path="/detalle/:id" element={<Detalle />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<Login />} />
+        <Route path="/detalle/:id" element={<Detalle />} />
+        <Route path="/preferencias" element={<PreferenciasUsuario />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>
