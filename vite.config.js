@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: 'https://jabet.github.io/myserieslog/',
+  base: '/',
   plugins: [
     react(), 
     tailwindcss()
