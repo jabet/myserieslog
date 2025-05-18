@@ -15,11 +15,20 @@ export default function Detalle() {
   const [enCatalogo, setEnCatalogo] = useState(false);
   const [temporal, setTemporal] = useState(false);
   const [mensaje, setMensaje] = useState("");
+  const [idioma, setIdioma] = useState("es");
   const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
       setUsuario(user);
+      if (user) {
+        const { data } = await supabase
+          .from("preferencias_usuario")
+          .select("idioma_preferido")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (data?.idioma_preferido) setIdioma(data.idioma_preferido);
+      }
     });
   }, []);
 
@@ -33,7 +42,7 @@ export default function Detalle() {
 
       if (!data) {
         const res = await fetch(
-          `https://api.themoviedb.org/3/tv/${id}?api_key=${TMDB_API_KEY}&language=es-ES`
+          `https://api.themoviedb.org/3/tv/${id}?api_key=${TMDB_API_KEY}&language=${idioma}`
         );
         const tmdbData = await res.json();
         setItem({
@@ -52,12 +61,22 @@ export default function Detalle() {
         return;
       }
 
-      setItem(data);
+      const { data: traduccion } = await supabase
+        .from("contenido_traducciones")
+        .select("sinopsis")
+        .eq("contenido_id", data.id)
+        .eq("idioma", idioma)
+        .maybeSingle();
+
+      setItem({
+        ...data,
+        sinopsis: traduccion?.sinopsis || "Sin sinopsis disponible",
+      });
       setTemporal(false);
     };
 
     cargarItem();
-  }, [id]);
+  }, [id, idioma]);
 
   useEffect(() => {
     const cargarEstadoCatalogo = async () => {
@@ -214,7 +233,7 @@ export default function Detalle() {
             datos={episodiosPorTemporada}
             vistos={vistos}
             toggle={toggleVisto}
-            idioma="es"
+            idioma={idioma}
           />
         </section>
       </main>
