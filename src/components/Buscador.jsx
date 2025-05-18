@@ -40,14 +40,6 @@ export default function Buscador() {
   }, [query, idiomaPreferido]);
 
   const seleccionar = async (item) => {
-    if (!usuario || !item.id) return;
-
-    const { data: existente } = await supabase
-      .from("contenido")
-      .select("id")
-      .eq("id", item.id)
-      .maybeSingle();
-
     const detalleUrl = `https://api.themoviedb.org/3/${item.media_type}/${item.id}?api_key=${TMDB_API_KEY}&language=${idiomaPreferido}`;
     const detalle = await fetch(detalleUrl).then((res) => res.json());
 
@@ -75,11 +67,7 @@ export default function Buscador() {
     ]);
 
     if (item.media_type === "tv") {
-      for (
-        let temporada = 1;
-        temporada <= (detalle.number_of_seasons || 1);
-        temporada++
-      ) {
+      for (let temporada = 1; temporada <= (detalle.number_of_seasons || 1); temporada++) {
         const episodiosRes = await fetch(
           `https://api.themoviedb.org/3/tv/${item.id}/season/${temporada}?api_key=${TMDB_API_KEY}&language=${idiomaPreferido}`
         );
@@ -91,23 +79,19 @@ export default function Buscador() {
             temporada: temporada,
             episodio: ep.episode_number,
             fecha_emision: ep.air_date,
-            imagen: ep.still_path
-              ? `https://image.tmdb.org/t/p/w300${ep.still_path}`
-              : null,
+            imagen: ep.still_path ? `https://image.tmdb.org/t/p/w300${ep.still_path}` : null,
           }));
 
           const { data: episodiosGuardados } = await supabase
             .from("episodios")
             .upsert(episodiosInsert, {
               onConflict: "contenido_id,temporada,episodio",
-              returning: "representation",
+              returning: "representation"
             });
 
           if (Array.isArray(episodiosGuardados)) {
             const traducciones = episodiosGuardados.map((ep, idx) => {
-              const tmdbEp = episodiosData.episodes.find(
-                (e) => e.episode_number === ep.episodio
-              );
+              const tmdbEp = episodiosData.episodes.find(e => e.episode_number === ep.episodio);
               return {
                 episodio_id: ep.id,
                 idioma: idiomaPreferido,
@@ -116,7 +100,7 @@ export default function Buscador() {
             });
 
             await supabase.from("episodio_traducciones").upsert(traducciones, {
-              onConflict: "episodio_id,idioma",
+              onConflict: "episodio_id,idioma"
             });
           }
         }

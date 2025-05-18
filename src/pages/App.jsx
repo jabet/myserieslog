@@ -3,6 +3,7 @@ import { supabase } from "../utils/supabaseClient";
 import Navbar from "../components/Navbar";
 import MediaCard from "../components/MediaCard";
 import CatalogoGrid from "../components/CatalogoGrid";
+import Footer from "../components/Footer";
 
 export default function App() {
   const [usuario, setUsuario] = useState(null);
@@ -101,11 +102,12 @@ export default function App() {
   };
 
   return (
-    <>
+    <div className="min-h-screen flex flex-col">
       <Navbar />
-      <main className="">
+      <main className="flex-1 pt-20 px-4">
         <CatalogoGrid catalogo={catalogo} onEliminar={eliminarItem} />
       </main>
-    </>
+      <Footer />
+    </div>
   );
 }

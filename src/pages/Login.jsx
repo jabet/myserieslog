@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../utils/supabaseClient";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
 
 export default function Login() {
   const [modo, setModo] = useState("login"); // 'login' o 'registro'
@@ -115,6 +116,7 @@ export default function Login() {
           </p>
         </div>
       </div>
+      <Footer />
     </>
   );
 }

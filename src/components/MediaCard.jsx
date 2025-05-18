@@ -6,7 +6,7 @@ export default function MediaCard({
   onVerDetalle,
 }) {
   return (
-    <div className="bg-white rounded shadow p-4 hover:shadow-md transition cursor-pointer max-w-50">
+    <div className="bg-white rounded shadow p-4 hover:shadow-md transition cursor-pointer max-w-50 align-top">
       {imagen && (
         <img
           src={imagen}
@@ -24,8 +24,8 @@ export default function MediaCard({
         >
           Ver más
         </button>
-        <button onClick={onEliminar} className="text-red-600 hover:underline">
-          Eliminar
+        <button onClick={onEliminar} className="cursor-pointer ">
+          🗑 Eliminar
         </button>
       </div>
     </div>

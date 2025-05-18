@@ -4,60 +4,115 @@ import Navbar from "../components/Navbar";
 
 export default function PreferenciasUsuario() {
   const [usuario, setUsuario] = useState(null);
-  const [idiomaPreferido, setIdiomaPreferido] = useState("es");
-  const [guardando, setGuardando] = useState(false);
+  const [idioma, setIdioma] = useState("es");
+  const [nick, setNick] = useState("");
+  const [avatar, setAvatar] = useState("");
+  const [guardado, setGuardado] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
       setUsuario(user);
-      if (user) cargarPreferencias(user.id);
+      if (user) {
+        const { data: pref } = await supabase
+          .from("preferencias_usuario")
+          .select("idioma_preferido")
+          .eq("user_id", user.id)
+          .single();
+        if (pref?.idioma_preferido) setIdioma(pref.idioma_preferido);
+
+        const { data: perfil } = await supabase
+          .from("usuarios")
+          .select("nick, avatar")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (perfil?.nick) setNick(perfil.nick);
+        if (perfil?.avatar) setAvatar(perfil.avatar);
+      }
     });
   }, []);
 
-  const cargarPreferencias = async (userId) => {
-    const { data } = await supabase
-      .from("preferencias_usuario")
-      .select("idioma_preferido")
-      .eq("user_id", userId)
-      .single();
+  const guardarCambios = async () => {
+    if (!usuario) return;
 
-    if (data) setIdiomaPreferido(data.idioma_preferido);
-  };
+    await supabase.from("preferencias_usuario").upsert(
+      {
+        user_id: usuario.id,
+        idioma_preferido: idioma,
+      },
+      { onConflict: "user_id" }
+    );
 
-  const guardarPreferencias = async () => {
-    setGuardando(true);
-    await supabase
-      .from("preferencias_usuario")
-      .upsert([{ user_id: usuario.id, idioma_preferido: idiomaPreferido }]);
-    setGuardando(false);
+    await supabase.from("usuarios").upsert(
+      {
+        id: usuario.id,
+        nick,
+        avatar,
+      },
+      { onConflict: "id" }
+    );
+
+    setGuardado(true);
+    setTimeout(() => setGuardado(false), 2000);
   };
 
   return (
     <>
       <Navbar />
-      <main className="pt-20 px-4 max-w-xl mx-auto">
-        <h1 className="text-2xl font-bold mb-4">Preferencias de Usuario</h1>
+      <main className="pt-24 max-w-xl mx-auto px-4">
+        <h1 className="text-2xl font-bold mb-6">Preferencias de usuario</h1>
 
-        <label className="block mb-2 font-medium">Idioma preferido:</label>
+        <label className="block text-sm font-medium mb-1" htmlFor="nick">
+          Tu apodo (nick):
+        </label>
+        <input
+          id="nick"
+          type="text"
+          value={nick}
+          onChange={(e) => setNick(e.target.value)}
+          className="w-full border px-3 py-2 rounded mb-4"
+          placeholder="Escribe tu nombre visible..."
+        />
+
+        <label className="block text-sm font-medium mb-1" htmlFor="avatar">
+          URL de tu avatar (imagen):
+        </label>
+        <input
+          id="avatar"
+          type="text"
+          value={avatar}
+          onChange={(e) => setAvatar(e.target.value)}
+          className="w-full border px-3 py-2 rounded mb-4"
+          placeholder="https://..."
+        />
+
+        <label className="block text-sm font-medium mb-1" htmlFor="idioma">
+          Idioma preferido:
+        </label>
         <select
-          value={idiomaPreferido}
-          onChange={(e) => setIdiomaPreferido(e.target.value)}
-          className="w-full border p-2 rounded mb-4"
+          id="idioma"
+          value={idioma}
+          onChange={(e) => setIdioma(e.target.value)}
+          className="w-full border px-3 py-2 rounded mb-6"
         >
           <option value="es">Español</option>
           <option value="en">Inglés</option>
           <option value="fr">Francés</option>
           <option value="de">Alemán</option>
-          <option value="ja">Japonés</option>
         </select>
 
         <button
-          onClick={guardarPreferencias}
+          onClick={guardarCambios}
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          disabled={guardando}
         >
-          {guardando ? "Guardando..." : "Guardar cambios"}
+          Guardar cambios
         </button>
+
+        {guardado && (
+          <p className="mt-3 text-green-600 text-sm">
+            ¡Preferencias guardadas!
+          </p>
+        )}
       </main>
     </>
   );
