@@ -9,7 +9,7 @@ import PreferenciasUsuario from "./pages/PreferenciasUsuario.jsx";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <BrowserRouter>
+    <BrowserRouter basename="/myserieslog/">
       <Routes>
         <Route path="/" element={<App />} />
         <Route path="/login" element={<Login />} />
