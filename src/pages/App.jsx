@@ -4,6 +4,8 @@ import Navbar from "../components/Navbar";
 import MediaCard from "../components/MediaCard";
 import CatalogoGrid from "../components/CatalogoGrid";
 import Footer from "../components/Footer";
+import React from "react";
+
 
 export default function App() {
   const [usuario, setUsuario] = useState(null);

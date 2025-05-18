@@ -1,4 +1,5 @@
 import MediaCard from "./MediaCard";
+import React from "react";
 
 export default function CatalogoGrid({ catalogo, onEliminar }) {
   return (

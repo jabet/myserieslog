@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../utils/supabaseClient";
 import Buscador from "./Buscador";
+import React from "react";
 
 export default function Navbar() {
   const [usuario, setUsuario] = useState(null);

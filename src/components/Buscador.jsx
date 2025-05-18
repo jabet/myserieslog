@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../utils/supabaseClient";
+import React from "react";
 
 export default function Buscador() {
   const [query, setQuery] = useState("");

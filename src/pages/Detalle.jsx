@@ -13,7 +13,6 @@ export default function Detalle() {
   const [vistos, setVistos] = useState([]);
   const [usuario, setUsuario] = useState(null);
   const [enCatalogo, setEnCatalogo] = useState(false);
-  const [temporal, setTemporal] = useState(false);
   const [mensaje, setMensaje] = useState("");
   const [idioma, setIdioma] = useState("es");
   const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY;
@@ -57,7 +56,10 @@ export default function Detalle() {
             ? `https://image.tmdb.org/t/p/w500${tmdbData.poster_path}`
             : null,
         });
-        setTemporal(true);
+        return;
+      }
+      if (error) {
+        console.error("Error al cargar el contenido:", error);
         return;
       }
 
@@ -72,11 +74,10 @@ export default function Detalle() {
         ...data,
         sinopsis: traduccion?.sinopsis || "Sin sinopsis disponible",
       });
-      setTemporal(false);
     };
 
     cargarItem();
-  }, [id, idioma]);
+  }, [id, idioma, TMDB_API_KEY]);
 
   useEffect(() => {
     const cargarEstadoCatalogo = async () => {
