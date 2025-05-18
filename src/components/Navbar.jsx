@@ -8,15 +8,17 @@ export default function Navbar() {
     window.location.href = "/login";
   };
   return (
-    <nav className="bg-gray-900 text-white px-6 py-3 flex items-center justify-between shadow fixed top-0 w-full z-50">
+    <nav className="bg-gray-900 text-white px-6 py-3 items-center justify-between shadow fixed top-0 w-full z-50 grid grid-cols-3">
       <div className="text-xl font-bold">
-        <a href="/">🎬 MiCatálogo</a>
+        <a href="/" alt="My Series Log; track you seies, films and animes">
+          My Series Log
+        </a>
       </div>
-      <div className="w-1/2">
+      <div className="col-span-2 flex justify-end items-center">
         <Link to="/preferencias" className="text-sm text-white hover:underline">
-          Usuario
+          Preferencias
         </Link>
-        <button onClick={cerrarSesion} className="ml-4 text-sm underline">
+        <button onClick={cerrarSesion} className="ml-4 mr-4 text-sm">
           Cerrar sesión
         </button>
 

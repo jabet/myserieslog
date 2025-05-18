@@ -2,14 +2,18 @@ export default function MediaCard({
   nombre,
   imagen,
   anio,
-  favorito,
   onEliminar,
   onVerDetalle,
 }) {
   return (
-    <div className="bg-white rounded shadow p-4 hover:shadow-md transition cursor-pointer">
+    <div className="bg-white rounded shadow p-4 hover:shadow-md transition cursor-pointer max-w-50">
       {imagen && (
-        <img src={imagen} alt={nombre} className="w-full rounded mb-2" />
+        <img
+          src={imagen}
+          alt={nombre}
+          onClick={onVerDetalle}
+          className="w-full rounded mb-2"
+        />
       )}
       <h3 className="text-lg font-semibold">{nombre}</h3>
       <p className="text-sm text-gray-600">{anio}</p>

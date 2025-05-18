@@ -130,7 +130,7 @@ export default function Buscador() {
     <div className="relative w-full max-w-md">
       <input
         type="text"
-        className="border rounded px-3 py-1 w-full"
+        className="border rounded px-3 py-1 w-full bg-white text-gray-500"
         placeholder="Buscar series o películas..."
         value={query}
         onChange={(e) => setQuery(e.target.value)}
@@ -153,7 +153,9 @@ export default function Buscador() {
                 <div className="w-12 h-18 bg-gray-200 rounded" />
               )}
               <div className="flex-1">
-                <p className="text-sm font-medium">{item.name || item.title}</p>
+                <p className="text-sm font-medium text-gray-800 ">
+                  {item.name || item.title}
+                </p>
                 <p className="text-xs text-gray-500">
                   {item.first_air_date?.slice(0, 4) ||
                     item.release_date?.slice(0, 4) ||

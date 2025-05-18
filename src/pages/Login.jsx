@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../utils/supabaseClient";
 import { useNavigate } from "react-router-dom";
+import Navbar from "../components/Navbar";
 
 export default function Login() {
   const [modo, setModo] = useState("login"); // 'login' o 'registro'
@@ -14,7 +15,7 @@ export default function Login() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) navigate("/");
     });
-  }, []);
+  }, [navigate]);
 
   // Handler para login
   const handleLogin = async (e) => {
@@ -52,65 +53,68 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-      <div className="bg-white shadow p-6 rounded w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-4 text-center">
-          {modo === "login" ? "Iniciar sesión" : "Registrarse"}
-        </h2>
+    <>
+      <Navbar />
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
+        <div className="bg-white shadow p-6 rounded w-full max-w-md">
+          <h2 className="text-2xl font-bold mb-4 text-center">
+            {modo === "login" ? "Iniciar sesión" : "Registrarse"}
+          </h2>
 
-        {errorMsg && <p className="text-red-500 text-sm mb-4">{errorMsg}</p>}
+          {errorMsg && <p className="text-red-500 text-sm mb-4">{errorMsg}</p>}
 
-        <form onSubmit={modo === "login" ? handleLogin : handleRegistro}>
-          <label className="block mb-2 text-sm">Correo electrónico</label>
-          <input
-            type="email"
-            className="w-full p-2 border rounded mb-4"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
+          <form onSubmit={modo === "login" ? handleLogin : handleRegistro}>
+            <label className="block mb-2 text-sm">Correo electrónico</label>
+            <input
+              type="email"
+              className="w-full p-2 border rounded mb-4"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
 
-          <label className="block mb-2 text-sm">Contraseña</label>
-          <input
-            type="password"
-            className="w-full p-2 border rounded mb-4"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
+            <label className="block mb-2 text-sm">Contraseña</label>
+            <input
+              type="password"
+              className="w-full p-2 border rounded mb-4"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
 
-          <button
-            type="submit"
-            className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
-          >
-            {modo === "login" ? "Entrar" : "Registrarse"}
-          </button>
-        </form>
+            <button
+              type="submit"
+              className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
+            >
+              {modo === "login" ? "Entrar" : "Registrarse"}
+            </button>
+          </form>
 
-        <p className="mt-4 text-center text-sm">
-          {modo === "login" ? (
-            <>
-              ¿No tienes cuenta?{" "}
-              <button
-                onClick={() => setModo("registro")}
-                className="text-blue-600 underline"
-              >
-                Regístrate
-              </button>
-            </>
-          ) : (
-            <>
-              ¿Ya tienes cuenta?{" "}
-              <button
-                onClick={() => setModo("login")}
-                className="text-blue-600 underline"
-              >
-                Inicia sesión
-              </button>
-            </>
-          )}
-        </p>
+          <p className="mt-4 text-center text-sm">
+            {modo === "login" ? (
+              <>
+                ¿No tienes cuenta?{" "}
+                <button
+                  onClick={() => setModo("registro")}
+                  className="text-blue-600 underline"
+                >
+                  Regístrate
+                </button>
+              </>
+            ) : (
+              <>
+                ¿Ya tienes cuenta?{" "}
+                <button
+                  onClick={() => setModo("login")}
+                  className="text-blue-600 underline"
+                >
+                  Inicia sesión
+                </button>
+              </>
+            )}
+          </p>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
