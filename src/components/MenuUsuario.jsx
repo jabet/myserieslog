@@ -1,0 +1,71 @@
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { supabase } from "../utils/supabaseClient";
+
+export default function MenuUsuario({ usuario, perfil }) {
+  const [abierto, setAbierto] = useState(false);
+
+  const cerrarSesion = async () => {
+    await supabase.auth.signOut();
+    window.location.href = "/login";
+  };
+
+  return (
+    <div className="relative z-50">
+      {/* Botón hamburguesa */}
+      <button
+        onClick={() => setAbierto(true)}
+        className="block md:hidden text-white focus:outline-none"
+      >
+        {perfil?.avatar ? (
+          <img
+            src={perfil.avatar}
+            alt="Avatar"
+            className="w-8 h-8 rounded-full border border-white"
+          />
+        ) : (
+          <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-xs">
+            {perfil?.nick?.[0]?.toUpperCase() || "U"}
+          </div>
+        )}
+      </button>
+
+      {/* Fondo oscurecido */}
+      {abierto && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40"
+          onClick={() => setAbierto(false)}
+        ></div>
+      )}
+
+      {/* Menú lateral */}
+      <div
+        className={`fixed top-0 right-0 h-full w-64 bg-white shadow-lg transform transition-transform duration-300 z-50
+          ${abierto ? "translate-x-0" : "translate-x-full"}`}
+      >
+        <div className="p-4 border-b font-semibold text-gray-800">
+          👋 Hola, {perfil?.nick || "Usuario"}
+        </div>
+        <ul className="p-4 space-y-4">
+          <li>
+            <Link
+              to="/preferencias"
+              onClick={() => setAbierto(false)}
+              className="block text-gray-800 hover:text-blue-600"
+            >
+              Preferencias
+            </Link>
+          </li>
+          <li>
+            <button
+              onClick={cerrarSesion}
+              className="text-left w-full text-red-600 hover:text-red-700"
+            >
+              Cerrar sesión
+            </button>
+          </li>
+        </ul>
+      </div>
+    </div>
+  );
+}
