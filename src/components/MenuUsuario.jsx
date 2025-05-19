@@ -17,7 +17,7 @@ export default function MenuUsuario({ usuario, perfil }) {
         onClick={() => setAbierto(true)}
         className="block md:hidden text-white focus:outline-none"
       >
-        {perfil?.avatar ? (
+        {usuario && perfil?.avatar ? (
           <img
             src={perfil.avatar}
             alt="Avatar"
@@ -25,7 +25,7 @@ export default function MenuUsuario({ usuario, perfil }) {
           />
         ) : (
           <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-xs">
-            {perfil?.nick?.[0]?.toUpperCase() || "U"}
+            {usuario && perfil?.nick?.[0] ? perfil.nick[0].toUpperCase() : "≡"}
           </div>
         )}
       </button>
@@ -44,26 +44,40 @@ export default function MenuUsuario({ usuario, perfil }) {
           ${abierto ? "translate-x-0" : "translate-x-full"}`}
       >
         <div className="p-4 border-b font-semibold text-gray-800">
-          👋 Hola, {perfil?.nick || "Usuario"}
+          {usuario ? `👋 Hola, ${perfil?.nick || "Usuario"}` : "👋 Bienvenido"}
         </div>
         <ul className="p-4 space-y-4">
-          <li>
-            <Link
-              to="/preferencias"
-              onClick={() => setAbierto(false)}
-              className="block text-gray-800 hover:text-blue-600"
-            >
-              Preferencias
-            </Link>
-          </li>
-          <li>
-            <button
-              onClick={cerrarSesion}
-              className="text-left w-full text-red-600 hover:text-red-700"
-            >
-              Cerrar sesión
-            </button>
-          </li>
+          {usuario ? (
+            <>
+              <li>
+                <Link
+                  to="/preferencias"
+                  onClick={() => setAbierto(false)}
+                  className="block text-gray-800 hover:text-blue-600"
+                >
+                  Preferencias
+                </Link>
+              </li>
+              <li>
+                <button
+                  onClick={cerrarSesion}
+                  className="text-left w-full text-red-600 hover:text-red-700"
+                >
+                  Cerrar sesión
+                </button>
+              </li>
+            </>
+          ) : (
+            <li>
+              <Link
+                to="/login"
+                onClick={() => setAbierto(false)}
+                className="block text-blue-600 hover:text-blue-800 border-8 border-red-600"
+              >
+                Iniciar sesión
+              </Link>
+            </li>
+          )}
         </ul>
       </div>
     </div>

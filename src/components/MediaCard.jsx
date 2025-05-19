@@ -17,7 +17,7 @@ export default function MediaCard({
           className="w-full rounded mb-2"
         />
       )}
-      <h3 className="text-lg font-semibold">{nombre}</h3>
+      <h3 className="text-md font-semibold line-clamp-1">{nombre}</h3>
       <p className="text-sm text-gray-600">{anio}</p>
       <div className="mt-2 flex justify-between">
         <button
