@@ -9,8 +9,9 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "add-domain": "echo myserieslog.com > dist/CNAME",
     "predeploy":"npm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "npm run add-domain && gh-pages -d dist"
   },
   "dependencies": {
     "@supabase/auth-ui-react": "^0.4.7",
