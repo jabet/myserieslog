@@ -28,19 +28,22 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-gray-900 text-white px-6 py-3 items-center justify-between shadow fixed top-0 w-full z-50 grid grid-cols-3">
-      <div className="text-xl font-bold">
+    <nav className="bg-gray-900 text-white px-6 py-3 items-center justify-between shadow fixed top-0 w-full z-50 grid sm:grid-cols-1 md:grid-cols-3">
+      <div className="text-xl font-bold sm:col-span-1 sm:justify-center">
         <Link to="/" alt="My Series Log; track your series, films and animes">
           My Series Log
         </Link>
       </div>
-      <div className="col-span-2 flex justify-end items-center gap-4">
+      <div className="sm:col-span-1 md:col-span-2 flex justify-end items-center gap-4">
         {usuario ? (
           <>
             <span className="text-sm text-gray-300">
               Hola{perfil?.nick ? `, ${perfil.nick}` : ""} 👋
             </span>
-            <Link to="/preferencias" className="text-sm text-white hover:underline">
+            <Link
+              to="/preferencias"
+              className="text-sm text-white hover:underline"
+            >
               Preferencias
             </Link>
             <button onClick={cerrarSesion} className="text-sm">

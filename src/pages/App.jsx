@@ -6,7 +6,6 @@ import CatalogoGrid from "../components/CatalogoGrid";
 import Footer from "../components/Footer";
 import React from "react";
 
-
 export default function App() {
   const [usuario, setUsuario] = useState(null);
   const [catalogo, setCatalogo] = useState([]);
@@ -104,7 +103,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col min-h-screem[100dvh] grid-rows-[auto_1fr_auto]">
       <Navbar />
       <main className="flex-1 pt-20 px-4">
         <CatalogoGrid catalogo={catalogo} onEliminar={eliminarItem} />
