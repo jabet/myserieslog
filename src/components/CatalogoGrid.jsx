@@ -12,7 +12,7 @@ export default function CatalogoGrid({ catalogo, onEliminar }) {
           anio={item.anio}
           favorito={item.favorito}
           onEliminar={() => onEliminar(item.id_catalogo)}
-          onVerDetalle={() => (window.location.href = `/detalle/${item.id}`)}
+          onVerDetalle={() => (window.location.href = `#/detalle/${item.id}`)}
         />
       ))}
     </div>

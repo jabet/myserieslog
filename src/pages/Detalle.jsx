@@ -186,9 +186,9 @@ export default function Detalle() {
 
   if (!item)
     return (
-      <p className="mt-10 p-4 mr-auto ml-auto border-b-emerald-800 bg-emerald-200 align-middle text-center text-emerald-800 font-bold max-w-40 border-2 rounded">
-        Cargando...
-      </p>
+      <>
+        <MensajeFlotante texto="Cargando..." />
+      </>
     );
 
   return (
@@ -235,6 +235,7 @@ export default function Detalle() {
             vistos={vistos}
             toggle={toggleVisto}
             idioma="es"
+            usuario={usuario}
           />
         </section>
       </main>

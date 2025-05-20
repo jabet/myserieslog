@@ -9,22 +9,31 @@ export default function EpisodiosPorTemporada({
   vistos,
   toggle,
   idioma,
+  usuario,
 }) {
   const [temporadasAbiertas, setTemporadasAbiertas] = useState({});
   const [episodiosPorTemporada, setEpisodiosPorTemporada] = useState({});
   const [cargando, setCargando] = useState({});
   const [temporadasDisponibles, setTemporadasDisponibles] = useState([]);
   const [mensaje, setMensaje] = useState("");
+  const [resumenTemporadas, setResumenTemporadas] = useState({});
 
   useEffect(() => {
     const cargarTemporadas = async () => {
       const { data, error } = await supabase
         .from("episodios")
-        .select("temporada")
+        .select("temporada, id")
         .eq("contenido_id", contenidoId);
 
       if (!error && data) {
-        const unicas = Array.from(new Set(data.map((e) => e.temporada))).sort();
+        const resumen = {};
+        data.forEach((e) => {
+          if (!resumen[e.temporada]) resumen[e.temporada] = [];
+          resumen[e.temporada].push(e.id);
+        });
+        setResumenTemporadas(resumen);
+
+        const unicas = Object.keys(resumen).map(Number).sort();
         setTemporadasDisponibles(unicas);
       }
     };
@@ -78,9 +87,14 @@ export default function EpisodiosPorTemporada({
       {temporadasDisponibles.map((temporada) => {
         const abierta = temporadasAbiertas[temporada];
         const lista = episodiosPorTemporada[temporada] || [];
-        const vistosTemporada = lista.filter((ep) =>
-          vistos.some((v) => v.episodio_id === ep.id)
-        ).length;
+        // Usa el resumen para el total de episodios
+        const totalEpisodios = resumenTemporadas[temporada]?.length || 0;
+        // Calcula los vistos de esa temporada
+        const vistosTemporada = resumenTemporadas[temporada]
+          ? resumenTemporadas[temporada].filter((id) =>
+              vistos.some((v) => v.episodio_id === id)
+            ).length
+          : 0;
 
         const todosVistos =
           lista.length > 0 && vistosTemporada === lista.length;
@@ -91,7 +105,9 @@ export default function EpisodiosPorTemporada({
               onClick={() => toggleTemporada(temporada)}
               className="w-full flex justify-between items-center px-4 py-2 bg-gray-100 hover:bg-gray-200"
             >
-              <span className="font-semibold">Temporada {temporada}</span>
+              <span className="font-semibold">
+                Temporada {temporada} ({vistosTemporada}/{totalEpisodios})
+              </span>
               <span>{abierta ? "▾" : "▸"}</span>
             </button>
 
@@ -105,33 +121,35 @@ export default function EpisodiosPorTemporada({
                   </div>
                 ) : (
                   <>
-                    <div className="py-2 flex items-center justify-between grap-4">
+                    <div className="py-2 flex items-center justify-between">
                       <ProgresoTemporada
                         total={lista.length}
                         vistos={vistosTemporada}
                       />
-                      <Button
-                        size="2"
-                        color={todosVistos ? "gray" : "blue"}
-                        onClick={() => {
-                          lista.forEach((ep) => {
-                            const yaVisto = vistos.some(
-                              (v) => v.episodio_id === ep.id
+                      {usuario && (
+                        <Button
+                          size="2"
+                          color={todosVistos ? "gray" : "blue"}
+                          onClick={() => {
+                            lista.forEach((ep) => {
+                              const yaVisto = vistos.some(
+                                (v) => v.episodio_id === ep.id
+                              );
+                              if (todosVistos && yaVisto) toggle(ep.id);
+                              if (!todosVistos && !yaVisto) toggle(ep.id);
+                            });
+                            mostrarMensaje(
+                              todosVistos
+                                ? `Se han desmarcado ${lista.length} episodios`
+                                : `Se han marcado ${lista.length} episodios como vistos`
                             );
-                            if (todosVistos && yaVisto) toggle(ep.id);
-                            if (!todosVistos && !yaVisto) toggle(ep.id);
-                          });
-                          mostrarMensaje(
-                            todosVistos
-                              ? `Se han desmarcado ${lista.length} episodios`
-                              : `Se han marcado ${lista.length} episodios como vistos`
-                          );
-                        }}
-                      >
-                        {todosVistos
-                          ? "Desmarcar todos"
-                          : "Marcar todos como vistos"}
-                      </Button>
+                          }}
+                        >
+                          {todosVistos
+                            ? "Desmarcar todos"
+                            : "Marcar todos como vistos"}
+                        </Button>
+                      )}
                     </div>
                     <div className="grid gap-3">
                       {lista.map((ep) => {
@@ -167,6 +185,7 @@ export default function EpisodiosPorTemporada({
                             </div>
                             <button
                               onClick={() => {
+                                if (!usuario) return;
                                 toggle(ep.id);
                                 mostrarMensaje(
                                   yaVisto
@@ -178,7 +197,8 @@ export default function EpisodiosPorTemporada({
                                 yaVisto
                                   ? "bg-green-500 text-white"
                                   : "bg-gray-200 text-gray-800"
-                              }`}
+                              } ${!usuario ? "opacity-50 cursor-not-allowed" : ""}`}
+                              disabled={!usuario}
                             >
                               {yaVisto ? "Visto" : "Marcar"}
                             </button>
