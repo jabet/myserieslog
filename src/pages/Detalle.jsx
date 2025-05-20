@@ -192,7 +192,7 @@ export default function Detalle() {
     );
 
   return (
-    <>
+    <div className="min-h-screen flex flex-col min-h-screem[100dvh] grid-rows-[auto_1fr_auto]">
       <Navbar />
       <main className="pt-20 px-4 max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold mb-4">{item.nombre}</h1>
@@ -231,14 +231,14 @@ export default function Detalle() {
 
         <section className="mt-8">
           <EpisodiosPorTemporada
-            datos={episodiosPorTemporada}
+            contenidoId={item.id}
             vistos={vistos}
             toggle={toggleVisto}
-            idioma={idioma}
+            idioma="es"
           />
         </section>
       </main>
       <Footer />
-    </>
+    </div>
   );
 }

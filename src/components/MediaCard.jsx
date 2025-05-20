@@ -8,7 +8,7 @@ export default function MediaCard({
   onVerDetalle,
 }) {
   return (
-    <div className="bg-white rounded shadow p-4 hover:shadow-md transition cursor-pointer align-top">
+    <div className="bg-white rounded shadow p-4 hover:shadow-md transition cursor-pointer align-top lg:max-w-55">
       {imagen && (
         <img
           src={imagen}
