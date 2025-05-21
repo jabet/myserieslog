@@ -1,41 +1,43 @@
+// src/pages/App.jsx
 import { useEffect, useState } from "react";
 import { supabase } from "../utils/supabaseClient";
 import Navbar from "../components/Navbar";
-import MediaCard from "../components/MediaCard";
 import CatalogoGrid from "../components/CatalogoGrid";
 import Footer from "../components/Footer";
-import React from "react";
+import FiltrosCatalogo from "../components/FiltrosCatalogo";
 
 export default function App() {
   const [usuario, setUsuario] = useState(null);
   const [catalogo, setCatalogo] = useState([]);
+  const [catalogoFiltrado, setCatalogoFiltrado] = useState([]);
   const [idiomaPreferido, setIdiomaPreferido] = useState("es");
-  const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 
+  // Obtener usuario y preferencia de idioma
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       setUsuario(user);
       if (user) {
-        const { data } = await supabase
+        const { data: pref } = await supabase
           .from("preferencias_usuario")
           .select("idioma_preferido")
           .eq("user_id", user.id)
           .single();
-        if (data?.idioma_preferido) {
-          setIdiomaPreferido(data.idioma_preferido);
-        }
+        if (pref?.idioma_preferido) setIdiomaPreferido(pref.idioma_preferido);
       }
     });
   }, []);
 
+  // Cargar catálogo del usuario con estado
   useEffect(() => {
     if (!usuario) return;
-
     const cargarCatalogo = async () => {
       const { data, error } = await supabase
         .from("catalogo_usuario")
         .select(
-          `contenido_id, contenido:contenido (id, imagen, tipo, anio, contenido_traducciones!contenido_id(idioma, nombre, sinopsis))`
+          `id, contenido_id, estado, favorito, plataformas,
+           contenido:contenido (id, imagen, tipo, anio, finalizada,
+             contenido_traducciones!contenido_id(idioma, nombre, sinopsis)
+           )`
         )
         .eq("user_id", usuario.id);
 
@@ -46,67 +48,72 @@ export default function App() {
 
       const resultados = await Promise.all(
         data.map(async (item) => {
-          const traduccion = item.contenido.contenido_traducciones?.find(
+          const catalogoId = item.id;
+          // Traducción preferida
+          const trad = item.contenido.contenido_traducciones?.find(
             (t) => t.idioma === idiomaPreferido
           );
-
-          if (!traduccion) {
-            // Descargar desde TMDb si no hay traducción
+          let nombre, sinopsis;
+          if (trad) {
+            nombre = trad.nombre;
+            sinopsis = trad.sinopsis;
+          } else {
             const res = await fetch(
-              `https://api.themoviedb.org/3/tv/${item.contenido.id}?api_key=${TMDB_API_KEY}&language=${idiomaPreferido}`
+              `https://api.themoviedb.org/3/tv/${item.contenido.id}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=${idiomaPreferido}`
             );
-            const tmdbData = await res.json();
-
-            if (tmdbData?.name) {
-              const nuevaTraduccion = {
-                contenido_id: item.contenido.id,
-                idioma: idiomaPreferido,
-                nombre: tmdbData.name,
-                sinopsis: tmdbData.overview,
-              };
-              await supabase
-                .from("contenido_traducciones")
-                .upsert([nuevaTraduccion]);
-              return {
-                id: item.contenido.id,
-                imagen: item.contenido.imagen,
-                tipo: item.contenido.tipo,
-                anio: item.contenido.anio,
-                nombre: nuevaTraduccion.nombre,
-                sinopsis: nuevaTraduccion.sinopsis,
-              };
-            }
+            const tmdb = await res.json();
+            nombre = tmdb.name || tmdb.title || "Sin título";
+            sinopsis = tmdb.overview || "";
+            await supabase
+              .from("contenido_traducciones")
+              .upsert([
+                {
+                  contenido_id: item.contenido.id,
+                  idioma: idiomaPreferido,
+                  nombre,
+                  sinopsis,
+                },
+              ]);
           }
-
           return {
+            id_catalogo: catalogoId,
             id: item.contenido.id,
             imagen: item.contenido.imagen,
             tipo: item.contenido.tipo,
             anio: item.contenido.anio,
-            nombre: traduccion?.nombre || "Sin título",
-            sinopsis: traduccion?.sinopsis || "",
+            finalizada: item.contenido.finalizada,
+            nombre,
+            sinopsis,
+            favorito: item.favorito,
+            estado: item.estado,
           };
         })
       );
 
       setCatalogo(resultados);
+      setCatalogoFiltrado(resultados);
     };
 
     cargarCatalogo();
   }, [usuario, idiomaPreferido]);
 
-  const eliminarItem = async (idCatalogo) => {
-    await supabase.from("catalogo_usuario").delete().eq("id", idCatalogo);
-    setCatalogo((prev) =>
-      prev.filter((item) => item.id_catalogo !== idCatalogo)
-    );
+  // Eliminar item del catálogo
+  const eliminarItem = async (contenidoId) => {
+    await supabase
+      .from("catalogo_usuario")
+      .delete()
+      .eq("user_id", usuario.id)
+      .eq("contenido_id", contenidoId);
+    setCatalogo((prev) => prev.filter((c) => c.id !== contenidoId));
+    setCatalogoFiltrado((prev) => prev.filter((c) => c.id !== contenidoId));
   };
 
   return (
-    <div className="min-h-screen flex flex-col min-h-screem[100dvh] grid-rows-[auto_1fr_auto]">
+    <div className="min-h-screen flex flex-col">
       <Navbar />
       <main className="flex-1 pt-20 px-4">
-        <CatalogoGrid catalogo={catalogo} onEliminar={eliminarItem} />
+        <FiltrosCatalogo catalogo={catalogo} onFiltrar={setCatalogoFiltrado} />
+        <CatalogoGrid catalogo={catalogoFiltrado} onEliminar={eliminarItem} />
       </main>
       <Footer />
     </div>

@@ -1,32 +1,67 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { supabase } from "../utils/supabaseClient";
 import Buscador from "./Buscador";
 import React from "react";
-import MenuUsuario from "./MenuUsuario";
-import { useUsuarioPerfil } from "../hooks/hookUserProfile";
 
 export default function Navbar() {
-  const { usuario, perfil } = useUsuarioPerfil();
+  const [usuario, setUsuario] = useState(null);
+  const [perfil, setPerfil] = useState(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      setUsuario(user);
+      if (user) {
+        const { data } = await supabase
+          .from("usuarios")
+          .select("nick")
+          .eq("id", user.id)
+          .single();
+        setPerfil(data);
+      }
+    });
+  }, []);
+
+  const cerrarSesion = async () => {
+    await supabase.auth.signOut();
+    window.location.href = "/login";
+  };
 
   return (
-    <nav className="bg-gray-900 text-white px-6 py-3 shadow fixed top-0 w-full z-50">
+    <nav className="bg-gradient-to-b from-slate-900 to-sky-900 text-white px-6 py-3 items-center justify-between shadow fixed top-0 w-full z-50 grid sm:grid-cols-1 md:grid-cols-3">
       <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-        {/* Logo */}
-        <div className="text-xl font-bold">
-          <Link to="/" alt="My Series Log">
-            My Series Log
-            <span className="text-amber-200 text-[8px] flex flex-col items-center justify-between">
-              ALPHA
+        <Link to="/" alt="My Series Log; track your series, films and animes">
+          My Series Log
+          <span className="text-amber-300 text-[0.5em]  flex flex-col items-center justify-between">
+            ALPHA
+          </span>
+        </Link>
+      </div>
+      <div className="sm:col-span-1 md:col-span-2 flex justify-end items-center gap-4">
+        {usuario ? (
+          <>
+            <span className="text-sm text-gray-300">
+              Hola{perfil?.nick ? `, ${perfil.nick}` : ""} 👋
             </span>
+            <Link
+              to="/preferencias"
+              className="text-sm text-white hover:underline"
+            >
+              Preferencias
+            </Link>
+            <Link to="/amigos" className="text-sm text-white hover:underline">
+              Amigos
+            </Link>
+            <button onClick={cerrarSesion} className="text-sm">
+              Cerrar sesión
+            </button>
+          </>
+        ) : (
+          <Link to="/login" className="text-sm text-white hover:underline">
+            Iniciar sesión
           </Link>
-        </div>
-
-        {/* Buscador */}
-        <div className="w-full md:w-1/2">
-          <Buscador />
-        </div>
-
-        {/* Usuario */}
-        <MenuUsuario usuario={usuario} perfil={perfil} />
+        )}
+        <Buscador />
       </div>
     </nav>
   );
