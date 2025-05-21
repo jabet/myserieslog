@@ -10,10 +10,11 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "add-domain": "echo myserieslog.com > dist/CNAME",
-    "predeploy":"npm run build",
+    "predeploy": "npm run build",
     "deploy": "npm run add-domain && gh-pages -d dist"
   },
   "dependencies": {
+    "@radix-ui/themes": "^3.2.1",
     "@supabase/auth-ui-react": "^0.4.7",
     "@supabase/auth-ui-shared": "^0.1.8",
     "@supabase/supabase-js": "^2.49.4",
