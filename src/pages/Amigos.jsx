@@ -5,13 +5,17 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import BuscadorUsuarios from "../components/BuscadorUsuarios";
 import Solicitudes from "../components/Solicitudes";
+import { useNavigate } from "react-router-dom";
 
 export default function Amigos() {
   const [amistades, setAmistades] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const navigate = useNavigate();
+
 
   useEffect(() => {
     const cargarAmistades = async () => {
+      
       // Obtener usuario actual
       const {
         data: { user },
@@ -84,7 +88,8 @@ export default function Amigos() {
               {amistades.map((a) => (
                 <li
                   key={a.id}
-                  className="flex items-center gap-2 p-2 border rounded"
+                  className="flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-gray-50"
+                  onClick={() => navigate(`/amigos/${a.id}`)}
                 >
                   {a.avatar ? (
                     <img src={a.avatar} className="w-8 h-8 rounded-full" />
