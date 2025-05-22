@@ -9,19 +9,20 @@ export default function RedSocial() {
   const navigate = useNavigate();
   const [usuario, setUsuario] = useState(null);
 
-  // búsquedas
+  // búsqueda de usuarios para invitar
   const [query, setQuery] = useState("");
   const [resultados, setResultados] = useState([]);
   const [buscando, setBuscando] = useState(false);
   const [msgBusqueda, setMsgBusqueda] = useState("");
 
-  // solicitudes
+  // solicitudes entrantes y salientes
   const [entrantes, setEntrantes] = useState([]);
   const [salientes, setSalientes] = useState([]);
 
-  // amigos
+  // lista de amigos aceptados
   const [amigos, setAmigos] = useState([]);
 
+  // al montar, obtenemos usuario y cargamos datos
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return;
@@ -31,14 +32,14 @@ export default function RedSocial() {
     });
   }, []);
 
-  // búsqueda de usuarios para invitar
+  // buscar usuarios para invitar
   useEffect(() => {
-    if (query.length < 2) {
+    if (!query || query.length < 2) {
       setResultados([]);
       return;
     }
     setBuscando(true);
-    const timer = setTimeout(async () => {
+    const timeout = setTimeout(async () => {
       const { data, error } = await supabase
         .from("usuarios")
         .select("id, nick")
@@ -47,31 +48,27 @@ export default function RedSocial() {
         .limit(10);
       if (error) {
         console.error("Buscar usuarios:", error);
-        setMsgBusqueda("Error al buscar.");
+        setMsgBusqueda("Error al buscar");
       } else {
         setResultados(data);
         setMsgBusqueda("");
       }
       setBuscando(false);
     }, 300);
-    return () => clearTimeout(timer);
+    return () => clearTimeout(timeout);
   }, [query, usuario]);
 
-  // carga solicitudes entrantes / salientes
+  // cargar solicitudes entrantes y salientes
   async function cargarSolicitudes(uid) {
     const [{ data: inReq }, { data: outReq }] = await Promise.all([
       supabase
         .from("amistades")
-        .select(
-          "id, usuario1, usuarios1:usuarios!amistades_usuario1_fkey(nick)"
-        )
+        .select("id, usuario1(id,nick)")
         .eq("usuario2", uid)
         .eq("estado", "pendiente"),
       supabase
         .from("amistades")
-        .select(
-          "id, usuario2, usuarios2:usuarios!amistades_usuario2_fkey(nick)"
-        )
+        .select("id, usuario2(id,nick)")
         .eq("usuario1", uid)
         .eq("estado", "pendiente"),
     ]);
@@ -79,7 +76,7 @@ export default function RedSocial() {
     setSalientes(outReq || []);
   }
 
-  // carga lista de amigos aceptados
+  // cargar lista de amigos aceptados con su flag de compartición
   async function cargarAmigos(uid) {
     const { data, error } = await supabase
       .from("amistades")
@@ -89,8 +86,8 @@ export default function RedSocial() {
         usuario1,
         usuario2,
         comparte_catalogo,
-        usuarios1:usuarios!amistades_usuario1_fkey(id, nick),
-        usuarios2:usuarios!amistades_usuario2_fkey(id, nick)
+        usuarios1:usuarios!amistades_usuario1_fkey(id,nick),
+        usuarios2:usuarios!amistades_usuario2_fkey(id,nick)
       `
       )
       .or(
@@ -101,9 +98,13 @@ export default function RedSocial() {
       console.error("Cargar amigos:", error);
       return;
     }
-    const lista = data.map((a) => {
+    const lista = (data || []).map((a) => {
       const esYo1 = a.usuario1 === uid;
-      const amigo = esYo1 ? a.usuarios2[0] : a.usuarios1[0];
+      const arr = esYo1 ? a.usuarios2 : a.usuarios1;
+      const amigo =
+        Array.isArray(arr) && arr.length > 0
+          ? arr[0]
+          : { id: esYo1 ? a.usuario2 : a.usuario1, nick: "—" };
       return {
         amistadId: a.id,
         amigoId: amigo.id,
@@ -114,9 +115,29 @@ export default function RedSocial() {
     setAmigos(lista);
   }
 
-  // enviar invitación
+  // enviar invitación (chequeo de duplicados)
   async function enviarInvitacion(destinoId) {
-    if (!usuario) return setMsgBusqueda("Inicia sesión primero.");
+    if (!usuario) {
+      setMsgBusqueda("Inicia sesión primero");
+      return;
+    }
+    const { data: existente } = await supabase
+      .from("amistades")
+      .select("estado")
+      .or(
+        `and(usuario1.eq.${usuario.id},usuario2.eq.${destinoId}),` +
+          `and(usuario1.eq.${destinoId},usuario2.eq.${usuario.id})`
+      )
+      .maybeSingle();
+    if (existente) {
+      const msgs = {
+        pendiente: "Ya hay una solicitud pendiente.",
+        aceptada: "Ya sois amigos.",
+        rechazada: "Ya existe relación previa.",
+      };
+      setMsgBusqueda(msgs[existente.estado] || "Relación existente");
+      return;
+    }
     const { error } = await supabase.from("amistades").insert([
       {
         usuario1: usuario.id,
@@ -127,7 +148,7 @@ export default function RedSocial() {
     ]);
     if (error) {
       console.error("Invitar:", error);
-      setMsgBusqueda("No se pudo enviar la invitación.");
+      setMsgBusqueda("Error al enviar invitación");
     } else {
       setMsgBusqueda("Invitación enviada 🎉");
       cargarSolicitudes(usuario.id);
@@ -135,7 +156,7 @@ export default function RedSocial() {
     setTimeout(() => setMsgBusqueda(""), 2000);
   }
 
-  // responder invitación
+  // responder a solicitud entrante
   async function responder(id, aceptar) {
     await supabase
       .from("amistades")
@@ -162,22 +183,20 @@ export default function RedSocial() {
       .from("amistades")
       .update({ comparte_catalogo: !actual })
       .eq("id", amistadId);
-    if (error) {
-      console.error("Toggle compartir:", error);
-    } else {
+    if (error) console.error("Toggle compartir:", error);
+    else
       setAmigos((prev) =>
         prev.map((a) =>
           a.amistadId === amistadId ? { ...a, comparte: !actual } : a
         )
       );
-    }
   }
 
   return (
     <>
       <Navbar />
       <div className="pt-20 px-4 max-w-3xl mx-auto space-y-8">
-        {/* 1) Buscar usuarios */}
+        {/* Buscar usuarios */}
         <section>
           <h2 className="text-xl font-semibold mb-2">Buscar amigos</h2>
           <div className="flex items-center gap-2 mb-2">
@@ -209,72 +228,62 @@ export default function RedSocial() {
           </ul>
         </section>
 
-        {/* 2) Solicitudes */}
+        {/* Solicitudes */}
         <section>
           <h2 className="text-xl font-semibold mb-2">Solicitudes</h2>
-
-          {/* Entrantes */}
           <div className="mb-4">
             <h3 className="font-medium mb-2">Entrantes</h3>
             {entrantes.length === 0 ? (
               <p className="text-gray-600">Ninguna</p>
             ) : (
-              entrantes.map((r) => {
-                const nickEntrante = r.usuarios1?.[0]?.nick ?? "—";
-                return (
-                  <div
-                    key={r.id}
-                    className="flex items-center justify-between bg-white p-2 rounded shadow mb-2"
-                  >
-                    <span>{nickEntrante}</span>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => responder(r.id, true)}
-                        className="px-2 py-1 bg-green-600 text-white rounded"
-                      >
-                        Aceptar
-                      </button>
-                      <button
-                        onClick={() => responder(r.id, false)}
-                        className="px-2 py-1 bg-red-600 text-white rounded"
-                      >
-                        Rechazar
-                      </button>
-                    </div>
+              entrantes.map((r) => (
+                <div
+                  key={r.id}
+                  className="flex items-center justify-between bg-white p-2 rounded shadow mb-2"
+                >
+                  <span>{r.usuario1.nick}</span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => responder(r.id, true)}
+                      className="px-2 py-1 bg-green-600 text-white rounded"
+                    >
+                      Aceptar
+                    </button>
+                    <button
+                      onClick={() => responder(r.id, false)}
+                      className="px-2 py-1 bg-red-600 text-white rounded"
+                    >
+                      Rechazar
+                    </button>
                   </div>
-                );
-              })
+                </div>
+              ))
             )}
           </div>
-
-          {/* Salientes */}
           <div>
             <h3 className="font-medium mb-2">Enviadas</h3>
             {salientes.length === 0 ? (
               <p className="text-gray-600">Ninguna</p>
             ) : (
-              salientes.map((r) => {
-                const nickDestino = r.usuarios2?.[0]?.nick ?? "—";
-                return (
-                  <div
-                    key={r.id}
-                    className="flex items-center justify-between bg-white p-2 rounded shadow mb-2"
+              salientes.map((r) => (
+                <div
+                  key={r.id}
+                  className="flex items-center justify-between bg-white p-2 rounded shadow mb-2"
+                >
+                  <span>{r.usuario2.nick}</span>
+                  <button
+                    onClick={() => cancelar(r.id)}
+                    className="px-2 py-1 bg-gray-500 text-white rounded"
                   >
-                    <span>{nickDestino}</span>
-                    <button
-                      onClick={() => cancelar(r.id)}
-                      className="px-2 py-1 bg-gray-500 text-white rounded"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                );
-              })
+                    Cancelar
+                  </button>
+                </div>
+              ))
             )}
           </div>
         </section>
 
-        {/* 3) Amigos */}
+        {/* Amigos */}
         <section>
           <h2 className="text-xl font-semibold mb-2">Tus amigos</h2>
           {amigos.length === 0 ? (
@@ -287,8 +296,8 @@ export default function RedSocial() {
                   className="flex items-center justify-between bg-white p-2 rounded shadow"
                 >
                   <span
-                    className="cursor-pointer hover:underline"
                     onClick={() => navigate(`/perfil/${a.amigoId}`)}
+                    className="cursor-pointer text-blue-600 hover:underline"
                   >
                     {a.nick}
                   </span>
