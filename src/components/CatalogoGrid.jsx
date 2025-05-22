@@ -13,6 +13,7 @@ export default function CatalogoGrid({ catalogo, onEliminar }) {
           favorito={item.favorito}
           onEliminar={() => onEliminar(item.id_catalogo)}
           onVerDetalle={() => (window.location.href = `#/detalle/${item.id}`)}
+          tipo={item.tipo}
         />
       ))}
     </div>

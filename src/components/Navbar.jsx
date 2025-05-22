@@ -16,7 +16,7 @@ export default function Navbar() {
       if (user) {
         const { data } = await supabase
           .from("usuarios")
-          .select("nick")
+          .select("nick,role")
           .eq("id", user.id)
           .single();
         setPerfil(data);
@@ -43,7 +43,7 @@ export default function Navbar() {
         </button>
 
         {/* Centered logo and search */}
-        <div className="flex-1 flex flex-col items-center">
+        <div className="flex-1 flex flex-col items-center xl:items-start">
           <Link to="/" className="text-xl font-bold">
             My Series Log
             <span className="text-amber-300 text-[0.5em]  flex flex-col items-center justify-between">
@@ -71,6 +71,11 @@ export default function Navbar() {
               <Link to="/amigos" className="text-sm hover:underline">
                 Amigos
               </Link>
+              {usuario && perfil?.role === "admin" && (
+                <Link to="/admin" className="text-sm hover:underline">
+                  Admin
+                </Link>
+              )}
               <button onClick={cerrarSesion} className="text-sm">
                 Cerrar sesión
               </button>
@@ -115,6 +120,13 @@ export default function Navbar() {
                   Amigos
                 </Link>
               </li>
+              {usuario && perfil?.role === "admin" && (
+                <li>
+                  <Link to="/admin" className="text-sm hover:underline">
+                    Admin
+                  </Link>
+                </li>
+              )}
               <li>
                 <button onClick={cerrarSesion} className="w-full text-left">
                   Cerrar sesión

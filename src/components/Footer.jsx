@@ -6,6 +6,7 @@ export default function Footer() {
       <p className="text-sm text-gray-600">
         © {new Date().getFullYear()} My Series Log.
       </p>
+      
     </footer>
   );
 }

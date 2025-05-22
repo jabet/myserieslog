@@ -7,20 +7,21 @@ import EpisodiosPorTemporada from "../components/EpisodiosPorTemporada";
 import SelectorEstado from "../components/SelectorEstado";
 import Footer from "../components/Footer";
 import MensajeFlotante from "../components/MensajeFlotante";
-import { actualizarCampoFinalizada } from "../utils/actualizarFinalizada";
+import { StarIcon, StarFilledIcon } from "@radix-ui/react-icons";
 
 export default function Detalle() {
   const { id } = useParams();
   const [item, setItem] = useState(null);
+  const [enCatalogo, setEnCatalogo] = useState(false);
+  const [estadoCatalogo, setEstadoCatalogo] = useState(null);
+  const [favorito, setFavorito] = useState(false);
   const [usuario, setUsuario] = useState(null);
   const [vistos, setVistos] = useState([]);
-  const [enCatalogo, setEnCatalogo] = useState(false);
-  const [estadoCatalogo, setEstadoCatalogo] = useState("");
   const [mensaje, setMensaje] = useState("");
   const [idioma, setIdioma] = useState("es");
   const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 
-  // Carga usuario y preferencia de idioma
+  // 1) Carga usuario y preferencias de idioma
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       setUsuario(user);
@@ -35,145 +36,177 @@ export default function Detalle() {
     });
   }, []);
 
-  // Carga contenido, traducción y estado
+  // 2) Cargar contenido (DB ó TMDb)
   useEffect(() => {
     const cargarItem = async () => {
-      // Intentar desde DB
       const { data, error } = await supabase
         .from("contenido")
-        .select(`* , catalogo_usuario(user_id, estado)`)
+        .select("*")
         .eq("id", Number(id))
         .single();
 
       if (data && !error) {
-        // Obtener traducción
-        const { data: trad } = await supabase
-          .from("contenido_traducciones")
-          .select("nombre, sinopsis")
-          .eq("contenido_id", data.id)
-          .eq("idioma", idioma)
-          .maybeSingle();
-
-        // Actualizar estado finalizada
-        const finalizada = await actualizarCampoFinalizada(data.id, idioma);
-
-        // Configurar item
-        setItem({
-          id: data.id,
-          nombre: trad?.nombre || data.nombre,
-          sinopsis:
-            trad?.sinopsis || data.sinopsis || "Sin información disponible.",
-          tipo: data.tipo,
-          anio: data.anio,
-          imagen: data.imagen,
-          finalizada: finalizada ?? data.finalizada,
-        });
-
-        // Estado catálogo
-        const entry = data.catalogo_usuario?.find(
-          (c) => c.user_id === usuario?.id
-        );
-        if (entry) {
-          setEnCatalogo(true);
-          setEstadoCatalogo(entry.estado);
-        }
-        return;
-      }
-
-      // Fallback TMDb
-      try {
-        const res = await fetch(
+        setItem(data);
+      } else {
+        // Fallback TMDb (TV o Movie)…
+        const tvRes = await fetch(
           `https://api.themoviedb.org/3/tv/${id}?api_key=${TMDB_API_KEY}&language=${idioma}`
         );
-        const tmdb = await res.json();
-        setItem({
-          id: tmdb.id,
-          nombre: tmdb.name || tmdb.title,
-          sinopsis: tmdb.overview || "Sin información disponible.",
-          tipo: tmdb.first_air_date ? "Serie" : "Película",
-          anio:
-            tmdb.first_air_date?.slice(0, 4) ||
-            tmdb.release_date?.slice(0, 4) ||
-            "Desconocido",
-          imagen: tmdb.poster_path
-            ? `https://image.tmdb.org/t/p/w500${tmdb.poster_path}`
-            : null,
-          finalizada: tmdb.status === "Ended",
-        });
-        setEnCatalogo(false);
-      } catch (e) {
-        console.error("Error obteniendo desde TMDb:", e);
+        const tvData = await tvRes.json();
+        if (!tvData.success) {
+          const mvRes = await fetch(
+            `https://api.themoviedb.org/3/movie/${id}?api_key=${TMDB_API_KEY}&language=${idioma}`
+          );
+          const mv = await mvRes.json();
+          setItem({
+            id: mv.id,
+            nombre: mv.title,
+            tipo: "Película",
+            sinopsis: mv.overview,
+            anio: mv.release_date?.slice(0, 4) || "Desconocido",
+            imagen: mv.poster_path
+              ? `https://image.tmdb.org/t/p/w500${mv.poster_path}`
+              : null,
+            finalizada: true,
+          });
+        } else {
+          setItem({
+            id: tvData.id,
+            nombre: tvData.name,
+            tipo: "Serie",
+            sinopsis: tvData.overview,
+            anio: tvData.first_air_date?.slice(0, 4) || "Desconocido",
+            imagen: tvData.poster_path
+              ? `https://image.tmdb.org/t/p/w500${tvData.poster_path}`
+              : null,
+            finalizada: tvData.status === "Ended",
+          });
+        }
       }
     };
-
     cargarItem();
-  }, [id, usuario, idioma]);
+  }, [id, idioma]);
 
-  // Carga episodios vistos
+  // 3) Cargar estado en catálogo: pendiente/viendo/vista, favorito
+  useEffect(() => {
+    if (!usuario || !item) return;
+    const cargarCatalogo = async () => {
+      const { data } = await supabase
+        .from("catalogo_usuario")
+        .select("estado, favorito")
+        .eq("user_id", usuario.id)
+        .eq("contenido_id", item.id)
+        .single();
+      if (data) {
+        setEnCatalogo(true);
+        setEstadoCatalogo(data.estado);
+        setFavorito(data.favorito);
+      } else {
+        setEnCatalogo(false);
+        setEstadoCatalogo(null);
+        setFavorito(false);
+      }
+    };
+    cargarCatalogo();
+  }, [usuario, item]);
+
+  // 4) Cargar episodios vistos
   useEffect(() => {
     if (!usuario) return;
-    const cargarVistos = async () => {
-      const { data } = await supabase
-        .from("episodios_vistos")
-        .select("episodio_id")
-        .eq("user_id", usuario.id);
-      setVistos(data || []);
-    };
-    cargarVistos();
+    supabase
+      .from("episodios_vistos")
+      .select("episodio_id")
+      .eq("user_id", usuario.id)
+      .then(({ data }) => setVistos(data || []));
   }, [usuario]);
 
-  // Toggle catálogo
+  // Mostrar mensaje flotante
+  const mostrar = (txt) => {
+    setMensaje(txt);
+    setTimeout(() => setMensaje(""), 3000);
+  };
+
+  // 5) Añadir/Quitar del catálogo
   const toggleCatalogo = async () => {
     if (!usuario || !item) {
-      setMensaje("Inicia sesión para gestionar tu catálogo");
-      setTimeout(() => setMensaje(""), 3000);
+      mostrar("Inicia sesión para gestionar tu catálogo");
       return;
     }
     if (enCatalogo) {
       await supabase
         .from("catalogo_usuario")
         .delete()
-        .match({ user_id: usuario.id, contenido_id: item.id });
+        .eq("user_id", usuario.id)
+        .eq("contenido_id", item.id);
       setEnCatalogo(false);
-      setEstadoCatalogo("");
+      setEstadoCatalogo(null);
+      setFavorito(false);
     } else {
-      await supabase
-        .from("catalogo_usuario")
-        .insert([
-          { user_id: usuario.id, contenido_id: item.id, estado: "pendiente" },
-        ]);
+      await supabase.from("catalogo_usuario").insert([
+        {
+          user_id: usuario.id,
+          contenido_id: item.id,
+          plataformas: [],
+          favorito: false,
+          estado: "pendiente",
+        },
+      ]);
       setEnCatalogo(true);
       setEstadoCatalogo("pendiente");
+      setFavorito(false);
     }
   };
 
-  // Cambiar estado en catálogo
+  // 6) Cambiar estado de catálogo
   const cambiarEstado = async (nuevo) => {
-    if (!usuario) return;
     await supabase
       .from("catalogo_usuario")
       .update({ estado: nuevo })
-      .match({ user_id: usuario.id, contenido_id: item.id });
+      .eq("user_id", usuario.id)
+      .eq("contenido_id", item.id);
     setEstadoCatalogo(nuevo);
+    mostrar(
+      nuevo === "pendiente"
+        ? "Añadida a “Lo quiero ver”"
+        : nuevo === "viendo"
+          ? "Estado cambiado a “Viéndola”"
+          : "Marcada como “Ya la vi”"
+    );
   };
 
-  // Toggle visto/desvisto episodios
-  const toggleVisto = async (eid) => {
+  // 7) Marcar/Desmarcar favorito con Radix iconos
+  const toggleFavorito = async () => {
     if (!usuario) {
-      setMensaje("Inicia sesión para marcar episodios");
-      setTimeout(() => setMensaje(""), 3000);
+      mostrar("Inicia sesión para marcar favoritos");
       return;
     }
-    const exists = vistos.some((v) => v.episodio_id === eid);
-    if (exists) {
+    const nuevo = !favorito;
+    await supabase
+      .from("catalogo_usuario")
+      .update({ favorito: nuevo })
+      .eq("user_id", usuario.id)
+      .eq("contenido_id", item.id);
+    setFavorito(nuevo);
+    mostrar(nuevo ? "Añadido a favoritos" : "Eliminado de favoritos");
+  };
+
+  // 8) Marcar episodio visto/desvisto
+  const toggleVisto = async (episodioId) => {
+    if (!usuario) {
+      mostrar("Inicia sesión para marcar episodios");
+      return;
+    }
+    const ya = vistos.some((v) => v.episodio_id === episodioId);
+    if (ya) {
       await supabase
         .from("episodios_vistos")
         .delete()
-        .match({ user_id: usuario.id, episodio_id: eid });
+        .eq("user_id", usuario.id)
+        .eq("episodio_id", episodioId);
     } else {
       await supabase
         .from("episodios_vistos")
-        .insert([{ user_id: usuario.id, episodio_id: eid }]);
+        .insert([{ user_id: usuario.id, episodio_id: episodioId }]);
     }
     const { data } = await supabase
       .from("episodios_vistos")
@@ -182,13 +215,25 @@ export default function Detalle() {
     setVistos(data || []);
   };
 
-  if (!item) return <p className="pt-20 p-4 text-center">Cargando...</p>;
+  if (!item) return <p className="pt-20 p-4 text-center">Cargando detalle…</p>;
 
   return (
     <>
       <Navbar />
       <main className="pt-20 px-4 max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-4">{item.nombre}</h1>
+        <div className="flex items-center gap-2 mb-4">
+          <h1 className="text-3xl font-bold">{item.nombre}</h1>
+          {enCatalogo && (
+            <button onClick={toggleFavorito} className="ml-2">
+              {favorito ? (
+                <StarFilledIcon className="w-6 h-6 text-yellow-500" />
+              ) : (
+                <StarIcon className="w-6 h-6 text-gray-500" />
+              )}
+            </button>
+          )}
+        </div>
+
         {item.imagen && (
           <img
             src={item.imagen}
@@ -196,8 +241,12 @@ export default function Detalle() {
             className="w-64 mb-4 rounded shadow"
           />
         )}
+
         <p className="mb-2">
           <strong>Año:</strong> {item.anio}
+        </p>
+        <p className="mb-2">
+          <strong>Tipo:</strong> {item.tipo}
         </p>
         {item.finalizada !== undefined && (
           <p className="mb-2">
@@ -205,6 +254,7 @@ export default function Detalle() {
             {item.finalizada ? "Finalizada" : "En emisión"}
           </p>
         )}
+
         <p className="mb-4">
           <strong>Sinopsis:</strong> {item.sinopsis}
         </p>
@@ -217,26 +267,33 @@ export default function Detalle() {
               : "bg-green-600 hover:bg-green-700"
           }`}
         >
-          {enCatalogo ? "Quitar del catálogo" : "Añadir a mi catálogo"}
+          {enCatalogo ? "Eliminar de mi catálogo" : "Añadir a mi catálogo"}
         </button>
 
         {enCatalogo && (
-          <div className="mb-6">
-            <label className="block text-sm font-medium mb-1">Mi estado:</label>
-            <SelectorEstado estado={estadoCatalogo} onChange={cambiarEstado} />
+          <div className="mb-4 flex items-center gap-4">
+            <div>
+              <label className="text-sm font-medium mr-2">Estado:</label>
+              <SelectorEstado
+                estado={estadoCatalogo}
+                onChange={cambiarEstado}
+              />
+            </div>
           </div>
         )}
 
         <MensajeFlotante texto={mensaje} />
 
-        <section className="mt-8">
-          <EpisodiosPorTemporada
-            contenidoId={item.id}
-            vistos={vistos}
-            toggle={toggleVisto}
-            idioma={idioma}
-          />
-        </section>
+        {item.tipo === "Serie" && (
+          <section className="mt-8">
+            <EpisodiosPorTemporada
+              contenidoId={item.id}
+              vistos={vistos}
+              toggle={toggleVisto}
+              idioma={idioma}
+            />
+          </section>
+        )}
       </main>
       <Footer />
     </>

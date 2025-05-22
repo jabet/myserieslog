@@ -1,34 +1,69 @@
+// src/components/MediaCard.jsx
 import React from "react";
 
 export default function MediaCard({
   nombre,
   imagen,
   anio,
+  tipo,
+  favorito,
   onEliminar,
   onVerDetalle,
 }) {
+  // Determina el color del badge según el tipo
+  let bgTipo;
+  switch (tipo) {
+    case "Serie":
+      bgTipo = "bg-blue-500";
+      break;
+    case "Película":
+      bgTipo = "bg-green-500";
+      break;
+    case "Anime":
+      bgTipo = "bg-purple-500";
+      break;
+    default:
+      bgTipo = "bg-gray-500";
+  }
+
   return (
-    <div className="bg-white rounded shadow p-4 hover:shadow-md transition cursor-pointer align-top lg:max-w-55">
-      {imagen && (
-        <img
-          src={imagen}
-          alt={nombre}
+    <div className="relative w-40 bg-white rounded shadow hover:shadow-md transition cursor-pointer">
+      {/* Badge de tipo */}
+      <span
+        className={`${bgTipo} text-white text-xs font-semibold px-2 py-0.5 rounded-br`}
+      >
+        {tipo}
+      </span>
+
+      {/* Imagen */}
+      <img
+        src={imagen}
+        alt={nombre}
+        className="w-full h-56 object-cover rounded-t"
+        onClick={onVerDetalle}
+      />
+
+      {/* Contenido */}
+      <div className="p-2">
+        <h3
+          className="text-sm font-medium mb-1 hover:underline"
           onClick={onVerDetalle}
-          className="w-full rounded mb-2"
-        />
-      )}
-      <h3 className="text-md font-semibold line-clamp-1">{nombre}</h3>
-      <p className="text-sm text-gray-600">{anio}</p>
-      <div className="mt-2 flex justify-between">
-        <button
-          onClick={onVerDetalle}
-          className="text-blue-600 hover:underline"
         >
-          Ver más
-        </button>
-        <button onClick={onEliminar} className="cursor-pointer ">
-          🗑 Eliminar
-        </button>
+          {nombre}
+        </h3>
+        <p className="text-xs text-gray-500 mb-2">{anio}</p>
+
+        <div className="flex justify-between items-center">
+          {favorito && <span className="text-red-500">❤️</span>}
+          {onEliminar && (
+            <button
+              onClick={onEliminar}
+              className="text-xs text-gray-400 hover:text-red-500"
+            >
+              Eliminar
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -114,6 +114,7 @@ export default function App() {
       <main className="flex-1 pt-20 px-4">
         <FiltrosCatalogo catalogo={catalogo} onFiltrar={setCatalogoFiltrado} />
         <CatalogoGrid catalogo={catalogoFiltrado} onEliminar={eliminarItem} />
+
       </main>
       <Footer />
     </div>
