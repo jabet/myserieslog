@@ -44,6 +44,7 @@ export default function FiltrosCatalogo({ catalogo, onFiltrar }) {
           <option value="Serie">Serie</option>
           <option value="Película">Película</option>
           <option value="Anime">Anime</option>
+          <option value="K-Drama">K-Drama</option>
         </select>
       </div>
 

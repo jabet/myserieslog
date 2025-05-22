@@ -3,7 +3,7 @@ import React from "react";
 
 export default function CatalogoGrid({ catalogo, onEliminar }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 items-center justify-items-center relative ">
+    <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-3 lg:grid-cols-8 gap-4 items-center justify-items-center relative ">
       {catalogo.map((item) => (
         <MediaCard
           key={item.id}
@@ -14,6 +14,7 @@ export default function CatalogoGrid({ catalogo, onEliminar }) {
           onEliminar={() => onEliminar(item.id_catalogo)}
           onVerDetalle={() => (window.location.href = `#/detalle/${item.id}`)}
           tipo={item.tipo}
+          estado={item.estado}
         />
       ))}
     </div>

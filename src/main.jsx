@@ -10,6 +10,7 @@ import Amigos from "./pages/Amigos.jsx";
 import PerfilAmigo from "./pages/PerfilAmigo.jsx";
 import PreferenciasUsuario from "./pages/PreferenciasUsuario.jsx";
 import AdminPanel from "./pages/AdminPanel.jsx";
+import Dashboard from "./pages/Dashboard.jsx";
 import React from "react";
 
 createRoot(document.getElementById("root")).render(
@@ -23,6 +24,7 @@ createRoot(document.getElementById("root")).render(
         <Route path="/amigos" element={<Amigos />} />
         <Route path="/amigos/:amigoId" element={<PerfilAmigo />} />
         <Route path="/admin" element={<AdminPanel />} />
+        <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
     </HashRouter>
   </StrictMode>

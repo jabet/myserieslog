@@ -15,106 +15,151 @@ export default function EpisodiosPorTemporada({
   const [episodiosPorTemporada, setEpisodiosPorTemporada] = useState({});
   const [cargando, setCargando] = useState({});
   const [temporadasDisponibles, setTemporadasDisponibles] = useState([]);
+  const [resumenTemporadas, setResumenTemporadas] = useState({});
+  const [resumenVistos, setResumenVistos] = useState({});
   const [mensaje, setMensaje] = useState("");
   const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY;
   const TMDB_BASE = "https://api.themoviedb.org/3";
 
-  // 1. Carga inicial de temporadas / fallback a TMDb
+  // 1) Cargo totales por temporada (o fallback global a TMDb)
   useEffect(() => {
     const cargarTemporadas = async () => {
-      // Intentar leer temporadas desde Supabase
-      const { data: supaSeasons, error: errSeasons } = await supabase
+      let { data: allEps, error } = await supabase
         .from("episodios")
         .select("temporada")
         .eq("contenido_id", contenidoId);
 
-      if (!errSeasons && supaSeasons.length > 0) {
-        const unicas = Array.from(
-          new Set(supaSeasons.map((e) => e.temporada))
-        ).sort();
-        setTemporadasDisponibles(unicas);
-        return;
-      }
-
-      // No hay episodios en BD → fallback TMDb
-      try {
-        // 1.1) Obtener cuántas temporadas tiene
-        const tvRes = await fetch(
-          `${TMDB_BASE}/tv/${contenidoId}?api_key=${TMDB_API_KEY}&language=${idioma}`
-        );
-        const tvMeta = await tvRes.json();
-        const totalTemp = tvMeta.number_of_seasons || 0;
-        const seasons = Array.from({ length: totalTemp }, (_, i) => i + 1);
-        setTemporadasDisponibles(seasons);
-
-        // 1.2) Descargar episodios de cada temporada
-        const allEpisodes = [];
-        for (const temporada of seasons) {
-          const seasonRes = await fetch(
-            `${TMDB_BASE}/tv/${contenidoId}/season/${temporada}?api_key=${TMDB_API_KEY}&language=${idioma}`
+      // Si no hay nada en BD, tiramos de TMDb para metadata
+      if (!error && allEps.length === 0) {
+        try {
+          const metaRes = await fetch(
+            `${TMDB_BASE}/tv/${contenidoId}?api_key=${TMDB_API_KEY}&language=${idioma}`
           );
-          const seasonData = await seasonRes.json();
-          for (const ep of seasonData.episodes || []) {
-            allEpisodes.push({
-              contenido_id: contenidoId,
-              temporada,
-              episodio: ep.episode_number,
-              nombre: ep.name,
-              fecha_emision: ep.air_date,
-              imagen: ep.still_path
-                ? `https://image.tmdb.org/t/p/w300${ep.still_path}`
-                : null,
-            });
-          }
-        }
+          const meta = await metaRes.json();
+          const seasonsInfo = meta.seasons || [];
 
-        // 1.3) Upsert en Supabase usando la clave única (contenido_id,temporada,episodio)
-        const { error: errInsert } = await supabase
-          .from("episodios")
-          .upsert(allEpisodes, {
-            onConflict: "contenido_id,temporada,episodio",
-          });
-        if (errInsert) {
-          console.error("Error al volcar episodios en BD:", errInsert);
-          mostrar("No se pudieron guardar los episodios.");
+          // Construimos resumenTemporadas sin insertar aún
+          allEps = seasonsInfo.flatMap((s) =>
+            Array.from({ length: s.episode_count }, () => ({
+              temporada: s.season_number,
+            }))
+          );
+        } catch (err) {
+          console.error("Error cargando metadata TMDb:", err);
+          setMensaje("No se pudieron determinar las temporadas.");
         }
-      } catch (err) {
-        console.error("Error fallback TMDb:", err);
-        mostrar("No se pudieron cargar los episodios.");
       }
+
+      const resumen = allEps.reduce((acc, { temporada }) => {
+        acc[temporada] = (acc[temporada] || 0) + 1;
+        return acc;
+      }, {});
+      setResumenTemporadas(resumen);
+      setTemporadasDisponibles(Object.keys(resumen).map(Number).sort());
     };
 
     cargarTemporadas();
   }, [contenidoId, idioma]);
 
-  // 2. Al abrir una temporada, cargar sus episodios traducidos
+  // 2) Resumen de vistos por temporada (filtro por contenidoId)
+  useEffect(() => {
+    const cargarVistos = async () => {
+      if (vistos.length === 0) {
+        setResumenVistos({});
+        return;
+      }
+
+      const vistoIds = vistos.map((v) => v.episodio_id);
+      const { data: eps } = await supabase
+        .from("episodios")
+        .select("temporada")
+        .eq("contenido_id", contenidoId)
+        .in("id", vistoIds);
+
+      const res = eps.reduce((acc, { temporada }) => {
+        acc[temporada] = (acc[temporada] || 0) + 1;
+        return acc;
+      }, {});
+      setResumenVistos(res);
+    };
+
+    cargarVistos();
+  }, [vistos, contenidoId]);
+
+  // 3) Toggle de temporada: carga (o refetch TMDb) sólo al abrir
   const toggleTemporada = async (temporada) => {
-    const yaAbierta = temporadasAbiertas[temporada];
-    setTemporadasAbiertas((p) => ({ ...p, [temporada]: !yaAbierta }));
-    if (yaAbierta || episodiosPorTemporada[temporada]) return;
+    const abierta = !!temporadasAbiertas[temporada];
+    setTemporadasAbiertas((p) => ({
+      ...p,
+      [temporada]: !abierta,
+    }));
+    if (abierta || episodiosPorTemporada[temporada]) return;
 
     setCargando((p) => ({ ...p, [temporada]: true }));
 
-    const { data: episodios } = await supabase
+    // 3.1 Intentar leer de Supabase
+    const { data: epsDB, error: errDB } = await supabase
       .from("episodios")
       .select("*")
       .eq("contenido_id", contenidoId)
       .eq("temporada", temporada)
       .order("episodio");
 
+    let episodiosRaw = [];
+    if (!errDB && epsDB.length > 0) {
+      episodiosRaw = epsDB;
+    } else {
+      // 3.2 Si no hay datos, fallback TMDb sólo de esta temporada
+      try {
+        const seasonRes = await fetch(
+          `${TMDB_BASE}/tv/${contenidoId}/season/${temporada}` +
+            `?api_key=${TMDB_API_KEY}&language=${idioma}`
+        );
+        const seasonData = await seasonRes.json();
+        episodiosRaw = (seasonData.episodes || []).map((ep) => ({
+          contenido_id: contenidoId,
+          temporada,
+          episodio: ep.episode_number,
+          nombre: ep.name,
+          fecha_emision: ep.air_date,
+          imagen: ep.still_path
+            ? `https://image.tmdb.org/t/p/w300${ep.still_path}`
+            : null,
+        }));
+
+        // 3.3 Upsert en BD para futuras lecturas
+        const { error: errUpsert } = await supabase
+          .from("episodios")
+          .upsert(episodiosRaw, {
+            onConflict: "contenido_id,temporada,episodio",
+          });
+        if (errUpsert) console.error("Upsert episodios:", errUpsert);
+      } catch (err) {
+        console.error("Error TMDb temporada:", err);
+        setMensaje("No se pudieron cargar los episodios.");
+      }
+    }
+
+    // 3.4 Traducir nombres si es necesario
     const traducidos = await Promise.all(
-      episodios.map(async (ep) => {
-        const { data: tradu } = await supabase
+      episodiosRaw.map(async (ep) => {
+        const { data: trad } = await supabase
           .from("episodio_traducciones")
           .select("nombre")
           .eq("episodio_id", ep.id)
           .eq("idioma", idioma)
           .maybeSingle();
-        return { ...ep, nombre: tradu?.nombre || ep.nombre || "Sin título" };
+        return {
+          ...ep,
+          nombre: trad?.nombre || ep.nombre || "Sin título",
+        };
       })
     );
 
-    setEpisodiosPorTemporada((p) => ({ ...p, [temporada]: traducidos }));
+    setEpisodiosPorTemporada((p) => ({
+      ...p,
+      [temporada]: traducidos,
+    }));
     setCargando((p) => ({ ...p, [temporada]: false }));
   };
 
@@ -126,16 +171,13 @@ export default function EpisodiosPorTemporada({
   return (
     <div className="space-y-4">
       <MensajeFlotante texto={mensaje} />
-      {temporadasDisponibles.length === 0 && (
-        <p className="text-center text-gray-500">Sin episodios disponibles.</p>
-      )}
+
       {temporadasDisponibles.map((temporada) => {
-        const abierta = temporadasAbiertas[temporada];
+        const total = resumenTemporadas[temporada] || 0;
+        const vistosCount = resumenVistos[temporada] || 0;
         const lista = episodiosPorTemporada[temporada] || [];
-        const vistosCount = lista.filter((ep) =>
-          vistos.some((v) => v.episodio_id === ep.id)
-        ).length;
-        const todosVistos = lista.length > 0 && vistosCount === lista.length;
+        const abierta = !!temporadasAbiertas[temporada];
+        const todosVistos = total > 0 && vistosCount === total;
 
         return (
           <div key={temporada} className="border rounded">
@@ -144,10 +186,11 @@ export default function EpisodiosPorTemporada({
               className="w-full flex justify-between items-center px-4 py-2 bg-gray-100 hover:bg-gray-200"
             >
               <span className="font-semibold">
-                Temporada {temporada} ({vistosCount}/{lista.length})
+                Temporada {temporada} ({vistosCount}/{total})
               </span>
               <span>{abierta ? "▾" : "▸"}</span>
             </button>
+
             {abierta && (
               <div className="px-4 py-2">
                 {cargando[temporada] ? (
@@ -159,25 +202,16 @@ export default function EpisodiosPorTemporada({
                 ) : (
                   <>
                     <div className="py-2 flex items-center justify-between">
-                      <ProgresoTemporada
-                        total={lista.length}
-                        vistos={vistosCount}
-                      />
+                      <ProgresoTemporada total={total} vistos={vistosCount} />
                       <Button
                         size="2"
                         color={todosVistos ? "gray" : "blue"}
                         onClick={() => {
-                          lista.forEach((ep) => {
-                            const ya = vistos.some(
-                              (v) => v.episodio_id === ep.id
-                            );
-                            if (todosVistos && ya) toggle(ep.id);
-                            if (!todosVistos && !ya) toggle(ep.id);
-                          });
+                          lista.forEach((ep) => toggle(ep.id));
                           mostrar(
                             todosVistos
-                              ? `Se han desmarcado ${lista.length} episodios`
-                              : `Se han marcado ${lista.length} episodios como vistos`
+                              ? `Se han desmarcado ${total} episodios`
+                              : `Se han marcado ${total} episodios como vistos`
                           );
                         }}
                       >
@@ -186,6 +220,7 @@ export default function EpisodiosPorTemporada({
                           : "Marcar todos como vistos"}
                       </Button>
                     </div>
+
                     <div className="grid gap-3">
                       {lista.map((ep) => {
                         const ya = vistos.some((v) => v.episodio_id === ep.id);
@@ -221,7 +256,7 @@ export default function EpisodiosPorTemporada({
                                 mostrar(
                                   ya
                                     ? `Episodio ${ep.episodio} desmarcado`
-                                    : `Episodio ${ep.episodio} marcado como visto`
+                                    : `Episodio ${ep.episode_number} marcado como visto`
                                 );
                               }}
                               className={`text-sm px-3 py-1 rounded ${

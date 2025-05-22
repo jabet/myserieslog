@@ -1,36 +1,45 @@
+// src/components/Buscador.jsx
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../utils/supabaseClient";
+import { detectarTipo } from "../utils/tmdbTypeDetector";
 
 export default function Buscador() {
   const [query, setQuery] = useState("");
   const [resultados, setResultados] = useState([]);
-  const [idiomaPreferido, setIdiomaPreferido] = useState("es");
+  const [idiomaPreferido, setIdiomaPreferido] = useState("es-ES");
   const [usuario, setUsuario] = useState(null);
   const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY;
   const navigate = useNavigate();
 
-  // Carga usuario y su idioma
+  // 1) Cargar usuario y su idioma preferido
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       setUsuario(user);
       if (user) {
-        const { data } = await supabase
+        const { data: pref } = await supabase
           .from("preferencias_usuario")
           .select("idioma_preferido")
           .eq("user_id", user.id)
           .single();
-        if (data?.idioma_preferido) {
-          setIdiomaPreferido(data.idioma_preferido);
+        if (pref?.idioma_preferido) {
+          // usar formato "es-ES" para TMDb
+          setIdiomaPreferido(
+            pref.idioma_preferido.length === 2
+              ? `${pref.idioma_preferido}-${pref.idioma_preferido.toUpperCase()}`
+              : pref.idioma_preferido
+          );
         }
       }
     });
   }, []);
 
-  // Búsqueda con debounce
+  // 2) Buscar con debounce
   useEffect(() => {
-    if (query.length < 2) return setResultados([]);
-
+    if (query.length < 2) {
+      setResultados([]);
+      return;
+    }
     const timer = setTimeout(async () => {
       const res = await fetch(
         `https://api.themoviedb.org/3/search/multi?` +
@@ -41,15 +50,13 @@ export default function Buscador() {
       const data = await res.json();
       setResultados(data.results || []);
     }, 400);
-
     return () => clearTimeout(timer);
   }, [query, idiomaPreferido]);
 
-  // Función que maneja la selección de un resultado
+  // 3) Seleccionar un resultado y añadir a Supabase
   const seleccionar = async (item) => {
     if (!item?.id) return;
-
-    // 1. Verificar si ya existe en Supabase
+    // Ver si ya existe en contenido
     const { data: existente } = await supabase
       .from("contenido")
       .select("id")
@@ -57,51 +64,68 @@ export default function Buscador() {
       .maybeSingle();
 
     if (!existente) {
-      // 2. Traer datos completos de TMDb según tipo
-      const esSerie = item.media_type === "tv";
-      const endpoint = esSerie
-        ? `https://api.themoviedb.org/3/tv/${item.id}`
-        : `https://api.themoviedb.org/3/movie/${item.id}`;
-
+      // 3.1) Traer datos completos de TMDb
+      const mediaType = item.media_type === "tv" ? "tv" : "movie";
+      const endpoint = mediaType === "tv" ? "tv" : "movie";
       const res = await fetch(
-        `${endpoint}?api_key=${TMDB_API_KEY}` + `&language=${idiomaPreferido}`
+        `https://api.themoviedb.org/3/${endpoint}/${item.id}` +
+          `?api_key=${TMDB_API_KEY}&language=${idiomaPreferido}`
       );
       const tmdb = await res.json();
 
-      // 3. Upsert en contenido
+      // 3.2) Detectar tipo extendido (Anime, Dorama, K-Drama, Serie o Película)
+      const tipo = detectarTipo(
+        {
+          ...tmdb,
+          genre_ids: tmdb.genre_ids || tmdb.genres?.map((g) => g.id) || [],
+          original_language: tmdb.original_language,
+          origin_country: tmdb.origin_country || [],
+        },
+        mediaType
+      );
+
+      // 3.3) Upsert en contenido
       const { error: err1 } = await supabase.from("contenido").upsert([
         {
           id: tmdb.id,
-          tipo: esSerie ? "Serie" : "Película",
+          tipo,
           anio:
-            (esSerie
-              ? tmdb.first_air_date?.slice(0, 4)
-              : tmdb.release_date?.slice(0, 4)) || null,
+            (mediaType === "tv"
+              ? tmdb.first_air_date
+              : tmdb.release_date
+            )?.slice(0, 4) || null,
           imagen: tmdb.poster_path
             ? `https://image.tmdb.org/t/p/w500${tmdb.poster_path}`
             : null,
+          finalizada: mediaType === "tv" ? tmdb.status === "Ended" : true,
         },
       ]);
       if (err1) {
-        console.error("Error insertando en contenido:", err1);
+        console.error("Error al insertar contenido:", err1);
         return;
       }
 
-      // 4. Upsert en traducciones
-      await supabase.from("contenido_traducciones").upsert(
-        [
-          {
-            contenido_id: tmdb.id,
-            idioma: idiomaPreferido,
-            nombre: tmdb.name || tmdb.title,
-            sinopsis: tmdb.overview,
-          },
-        ],
-        { onConflict: "contenido_id,idioma" }
-      );
+      // 3.4) Upsert en traducciones
+      const { error: err2 } = await supabase
+        .from("contenido_traducciones")
+        .upsert(
+          [
+            {
+              contenido_id: tmdb.id,
+              idioma: idiomaPreferido,
+              nombre: tmdb.name || tmdb.title,
+              sinopsis: tmdb.overview,
+            },
+          ],
+          { onConflict: "contenido_id,idioma" }
+        );
+      if (err2) {
+        console.error("Error al insertar traducción:", err2);
+        return;
+      }
     }
 
-    // 5. Navegar a detalle
+    // 3.5) Navegar a detalle
     navigate(`/detalle/${item.id}`);
   };
 
@@ -116,7 +140,7 @@ export default function Buscador() {
       />
 
       {resultados.length > 0 && (
-        <ul className="absolute z-10 bg-white border rounded w-full max-h-72 overflow-y-auto shadow-lg">
+        <ul className="absolute z-10 bg-white border rounded w-full max-h-80 overflow-y-auto shadow-lg">
           {resultados.map((item) => (
             <li
               key={`${item.media_type}-${item.id}`}
@@ -132,20 +156,20 @@ export default function Buscador() {
               ) : (
                 <div className="w-12 h-18 bg-gray-300 rounded" />
               )}
-              <div>
-                <p className="text-sm font-medium text-black">
+
+              <div className="flex-1">
+                <p className="text-sm font-medium text-black hover:underline">
                   {item.name || item.title}
                 </p>
-                {item.media_type && (
-                  <p className="text-xs text-gray-500 uppercase">
+                <div className="flex items-center gap-2 text-xs text-gray-500">
+                  <span>
+                    {(item.first_air_date || item.release_date)?.slice(0, 4) ||
+                      ""}
+                  </span>
+                  <span className="uppercase">
                     {item.media_type === "tv" ? "Serie" : "Película"}
-                  </p>
-                )}
-                {(item.first_air_date || item.release_date) && (
-                  <p className="text-xs text-gray-500">
-                    {(item.first_air_date || item.release_date).slice(0, 4)}
-                  </p>
-                )}
+                  </span>
+                </div>
               </div>
             </li>
           ))}

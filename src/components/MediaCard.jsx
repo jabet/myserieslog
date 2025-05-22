@@ -1,11 +1,13 @@
 // src/components/MediaCard.jsx
 import React from "react";
+import { EyeOpenIcon } from "@radix-ui/react-icons";
 
 export default function MediaCard({
   nombre,
   imagen,
   anio,
   tipo,
+  estado,       // ← nuevo prop: "pendiente" | "viendo" | "vista"
   favorito,
   onEliminar,
   onVerDetalle,
@@ -21,6 +23,12 @@ export default function MediaCard({
       break;
     case "Anime":
       bgTipo = "bg-purple-500";
+      break;
+    case "Dorama":
+      bgTipo = "bg-pink-500";
+      break;
+    case "K-Drama":
+      bgTipo = "bg-yellow-600";
       break;
     default:
       bgTipo = "bg-gray-500";
@@ -54,7 +62,15 @@ export default function MediaCard({
         <p className="text-xs text-gray-500 mb-2">{anio}</p>
 
         <div className="flex justify-between items-center">
+          {/* Icono de "viendo" */}
+          {estado === "viendo" && (
+            <EyeOpenIcon className="w-5 h-5 text-blue-600" />
+          )}
+
+          {/* Icono favorito */}
           {favorito && <span className="text-red-500">❤️</span>}
+
+          {/* Botón eliminar */}
           {onEliminar && (
             <button
               onClick={onEliminar}
