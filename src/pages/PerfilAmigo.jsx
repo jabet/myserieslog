@@ -1,5 +1,6 @@
+// src/pages/PerfilAmigo.jsx
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
 import { supabase } from "../utils/supabaseClient";
 import Navbar from "../components/Navbar";
 import MediaCard from "../components/MediaCard";
@@ -17,7 +18,7 @@ export default function PerfilAmigo() {
   const [loading, setLoading] = useState(true);
   const [mensaje, setMensaje] = useState("");
 
-  // 1) Cargo usuario actual y su idioma preferido
+  // 1) Carga usuario actual y su idioma preferido
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return;
@@ -33,7 +34,7 @@ export default function PerfilAmigo() {
     });
   }, []);
 
-  // 2) Cargo perfil del amigo, compruebo amistad y permiso de compartir, luego catálogo
+  // 2) Carga perfil del amigo, verifica amistad y comparte, luego su catálogo
   useEffect(() => {
     if (!usuario) return;
 
@@ -43,10 +44,10 @@ export default function PerfilAmigo() {
       setComparte(false);
       setCatalogo([]);
 
-      // 2.1) Perfil del amigo con su flag comparte_catalogo
+      // 2.1) Obtener datos básicos del amigo
       const { data: perfil, error: errPerfil } = await supabase
         .from("usuarios")
-        .select("nick, avatar, comparte_catalogo")
+        .select("nick, avatar")
         .eq("id", amigoId)
         .single();
 
@@ -57,13 +58,13 @@ export default function PerfilAmigo() {
       }
       setPerfilAmigo(perfil);
 
-      // 2.2) Verificar que sois amigos
+      // 2.2) Verificar relación de amistad y su estado
       const { data: rel } = await supabase
         .from("amistades")
         .select("estado, comparte_catalogo")
         .or(
           `and(usuario1.eq.${usuario.id},usuario2.eq.${amigoId}),` +
-          `and(usuario1.eq.${amigoId},usuario2.eq.${usuario.id})`
+            `and(usuario1.eq.${amigoId},usuario2.eq.${usuario.id})`
         )
         .maybeSingle();
 
@@ -103,7 +104,7 @@ export default function PerfilAmigo() {
         return;
       }
 
-      // 2.5) Mapear al formato de MediaCard
+      // 2.5) Mapear traducciones al idioma preferido
       const resultados = items.map((it) => {
         const trad =
           it.contenido.contenido_traducciones?.find(
@@ -129,7 +130,6 @@ export default function PerfilAmigo() {
   return (
     <>
       <Navbar />
-
       <main className="pt-20 px-4 max-w-4xl mx-auto">
         <h1 className="text-2xl font-bold mb-4">
           {perfilAmigo
@@ -139,9 +139,7 @@ export default function PerfilAmigo() {
 
         {loading && <p>Cargando catálogo...</p>}
 
-        {!loading && mensaje && (
-          <p className="text-red-600">{mensaje}</p>
-        )}
+        {!loading && mensaje && <p className="text-red-600 mb-4">{mensaje}</p>}
 
         {!loading && comparte && catalogo.length === 0 && (
           <p className="text-gray-600">No hay contenidos en su catálogo.</p>
@@ -162,7 +160,6 @@ export default function PerfilAmigo() {
           </div>
         )}
       </main>
-
       <Footer />
     </>
   );
