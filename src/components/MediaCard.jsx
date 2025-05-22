@@ -54,7 +54,7 @@ export default function MediaCard({
       {/* Contenido */}
       <div className="p-2">
         <h3
-          className="text-sm font-medium mb-1 hover:underline"
+          className="text-sm font-medium mb-1 hover:underline line-clamp-1"
           onClick={onVerDetalle}
         >
           {nombre}
