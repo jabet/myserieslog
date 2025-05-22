@@ -1,4 +1,3 @@
-// src/pages/PerfilAmigo.jsx
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "../utils/supabaseClient";
@@ -18,8 +17,8 @@ export default function PerfilAmigo() {
   const [loading, setLoading] = useState(true);
   const [mensaje, setMensaje] = useState("");
 
+  // 1) Cargo usuario actual y su idioma preferido
   useEffect(() => {
-    // Carga usuario y preferencia de idioma
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return;
       setUsuario(user);
@@ -28,57 +27,83 @@ export default function PerfilAmigo() {
         .select("idioma_preferido")
         .eq("user_id", user.id)
         .single();
-      if (pref?.idioma_preferido) setIdioma(pref.idioma_preferido);
+      if (pref?.idioma_preferido) {
+        setIdioma(pref.idioma_preferido);
+      }
     });
   }, []);
 
+  // 2) Cargo perfil del amigo, compruebo amistad y permiso de compartir, luego catálogo
   useEffect(() => {
     if (!usuario) return;
 
     const cargarPerfil = async () => {
       setLoading(true);
-      // 1) Carga datos de perfil del amigo
-      const { data: perfil } = await supabase
+      setMensaje("");
+      setComparte(false);
+      setCatalogo([]);
+
+      // 2.1) Perfil del amigo con su flag comparte_catalogo
+      const { data: perfil, error: errPerfil } = await supabase
         .from("usuarios")
-        .select("nick, avatar")
+        .select("nick, avatar, comparte_catalogo")
         .eq("id", amigoId)
         .single();
+
+      if (errPerfil || !perfil) {
+        setMensaje("Usuario no encontrado.");
+        setLoading(false);
+        return;
+      }
       setPerfilAmigo(perfil);
 
-      // 2) Verifica relación de amistad y si comparte catálogo
+      // 2.2) Verificar que sois amigos
       const { data: rel } = await supabase
         .from("amistades")
-        .select("comparte_catalogo")
+        .select("estado, comparte_catalogo")
         .or(
           `and(usuario1.eq.${usuario.id},usuario2.eq.${amigoId}),` +
           `and(usuario1.eq.${amigoId},usuario2.eq.${usuario.id})`
         )
         .maybeSingle();
-      if (!rel) {
-        setMensaje("No sois amigos");
+
+      if (!rel || rel.estado !== "aceptada") {
+        setMensaje("No sois amigos.");
         setLoading(false);
         return;
       }
+
+      // 2.3) Comprobar permiso individual de compartir
       if (!rel.comparte_catalogo) {
-        setMensaje("Este usuario no comparte su catálogo");
+        setMensaje("Este usuario no comparte su catálogo.");
         setLoading(false);
         return;
       }
       setComparte(true);
 
-      // 3) Carga el catálogo del amigo
-      const { data: items } = await supabase
+      // 2.4) Cargar catálogo del amigo
+      const { data: items, error: errCat } = await supabase
         .from("catalogo_usuario")
         .select(
-          `contenido_id, 
+          `contenido_id,
            contenido:contenido (
-             id, imagen, tipo, anio,
+             id,
+             imagen,
+             tipo,
+             anio,
              contenido_traducciones!contenido_id(idioma, nombre, sinopsis)
            )`
         )
         .eq("user_id", amigoId);
 
-      // 4) Mapear traducciones al idioma preferido
+      if (errCat) {
+        console.error("Error cargando catálogo amigo:", errCat);
+        setMensaje("No se pudo cargar el catálogo.");
+        setLoading(false);
+        return;
+      }
+
+      // 2.5) Mapear al formato de MediaCard
       const resultados = items.map((it) => {
         const trad =
           it.contenido.contenido_traducciones?.find(
@@ -90,6 +115,7 @@ export default function PerfilAmigo() {
           sinopsis: trad.sinopsis || "Sin información disponible.",
           imagen: it.contenido.imagen,
           anio: it.contenido.anio,
+          tipo: it.contenido.tipo,
         };
       });
 
@@ -103,6 +129,7 @@ export default function PerfilAmigo() {
   return (
     <>
       <Navbar />
+
       <main className="pt-20 px-4 max-w-4xl mx-auto">
         <h1 className="text-2xl font-bold mb-4">
           {perfilAmigo
@@ -111,6 +138,7 @@ export default function PerfilAmigo() {
         </h1>
 
         {loading && <p>Cargando catálogo...</p>}
+
         {!loading && mensaje && (
           <p className="text-red-600">{mensaje}</p>
         )}
@@ -127,14 +155,14 @@ export default function PerfilAmigo() {
                 nombre={c.nombre}
                 imagen={c.imagen}
                 anio={c.anio}
-                onVerDetalle={() =>
-                  navigate(`/detalle/${c.id}`)
-                }
+                tipo={c.tipo}
+                onVerDetalle={() => navigate(`/detalle/${c.id}`)}
               />
             ))}
           </div>
         )}
       </main>
+
       <Footer />
     </>
   );

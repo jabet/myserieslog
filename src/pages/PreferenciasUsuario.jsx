@@ -1,3 +1,4 @@
+// src/pages/PreferenciasUsuario.jsx
 import { useEffect, useState } from "react";
 import { supabase } from "../utils/supabaseClient";
 import Navbar from "../components/Navbar";
@@ -7,27 +8,32 @@ export default function PreferenciasUsuario() {
   const [idioma, setIdioma] = useState("es");
   const [nick, setNick] = useState("");
   const [avatar, setAvatar] = useState("");
+  const [compartir, setCompartir] = useState(false);    // ← nuevo estado
   const [guardado, setGuardado] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return;
       setUsuario(user);
-      if (user) {
-        const { data: pref } = await supabase
-          .from("preferencias_usuario")
-          .select("idioma_preferido")
-          .eq("user_id", user.id)
-          .single();
-        if (pref?.idioma_preferido) setIdioma(pref.idioma_preferido);
 
-        const { data: perfil } = await supabase
-          .from("usuarios")
-          .select("nick, avatar")
-          .eq("id", user.id)
-          .maybeSingle();
+      // 1) Preferencias de idioma
+      const { data: pref } = await supabase
+        .from("preferencias_usuario")
+        .select("idioma_preferido")
+        .eq("user_id", user.id)
+        .single();
+      if (pref?.idioma_preferido) setIdioma(pref.idioma_preferido);
 
-        if (perfil?.nick) setNick(perfil.nick);
-        if (perfil?.avatar) setAvatar(perfil.avatar);
+      // 2) Perfil: nick + avatar
+      const { data: perfil } = await supabase
+        .from("usuarios")
+        .select("nick, avatar, compartir_catalogo")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (perfil?.nick) setNick(perfil.nick);
+      if (perfil?.avatar) setAvatar(perfil.avatar);
+      if (typeof perfil?.compartir_catalogo === "boolean") {
+        setCompartir(perfil.compartir_catalogo);
       }
     });
   }, []);
@@ -35,6 +41,7 @@ export default function PreferenciasUsuario() {
   const guardarCambios = async () => {
     if (!usuario) return;
 
+    // 1) Guardar idioma
     await supabase.from("preferencias_usuario").upsert(
       {
         user_id: usuario.id,
@@ -43,15 +50,18 @@ export default function PreferenciasUsuario() {
       { onConflict: "user_id" }
     );
 
+    // 2) Guardar perfil + compartir catálogo
     await supabase.from("usuarios").upsert(
       {
         id: usuario.id,
         nick,
         avatar,
+        compartir_catalogo: compartir,       // ← lo incluimos aquí
       },
       { onConflict: "id" }
     );
 
+    // Feedback
     setGuardado(true);
     setTimeout(() => setGuardado(false), 2000);
   };
@@ -62,7 +72,8 @@ export default function PreferenciasUsuario() {
       <main className="pt-24 max-w-xl mx-auto px-4">
         <h1 className="text-2xl font-bold mb-6">Preferencias de usuario</h1>
 
-        <label className="block text-sm font-medium mb-1" htmlFor="nick">
+        {/* Nick */}
+        <label htmlFor="nick" className="block text-sm font-medium mb-1">
           Tu apodo (nick):
         </label>
         <input
@@ -74,7 +85,8 @@ export default function PreferenciasUsuario() {
           placeholder="Escribe tu nombre visible..."
         />
 
-        <label className="block text-sm font-medium mb-1" htmlFor="avatar">
+        {/* Avatar */}
+        <label htmlFor="avatar" className="block text-sm font-medium mb-1">
           URL de tu avatar (imagen):
         </label>
         <input
@@ -86,7 +98,8 @@ export default function PreferenciasUsuario() {
           placeholder="https://..."
         />
 
-        <label className="block text-sm font-medium mb-1" htmlFor="idioma">
+        {/* Idioma */}
+        <label htmlFor="idioma" className="block text-sm font-medium mb-1">
           Idioma preferido:
         </label>
         <select
@@ -101,6 +114,21 @@ export default function PreferenciasUsuario() {
           <option value="de">Alemán</option>
         </select>
 
+        {/* Compartir catálogo */}
+        <div className="flex items-center mb-6">
+          <input
+            id="compartir"
+            type="checkbox"
+            checked={compartir}
+            onChange={() => setCompartir(!compartir)}
+            className="h-5 w-5 text-green-600 border-gray-300 rounded focus:ring-green-500"
+          />
+          <label htmlFor="compartir" className="ml-2 text-sm">
+            Compartir mi catálogo con amigos
+          </label>
+        </div>
+
+        {/* Guardar */}
         <button
           onClick={guardarCambios}
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"

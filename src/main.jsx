@@ -11,6 +11,7 @@ import PerfilAmigo from "./pages/PerfilAmigo.jsx";
 import PreferenciasUsuario from "./pages/PreferenciasUsuario.jsx";
 import AdminPanel from "./pages/AdminPanel.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
+import RedSocial from "./pages/RedSocial.jsx";
 import React from "react";
 
 createRoot(document.getElementById("root")).render(
@@ -21,10 +22,10 @@ createRoot(document.getElementById("root")).render(
         <Route path="/login" element={<Login />} />
         <Route path="/detalle/:id" element={<Detalle />} />
         <Route path="/preferencias" element={<PreferenciasUsuario />} />
-        <Route path="/amigos" element={<Amigos />} />
-        <Route path="/amigos/:amigoId" element={<PerfilAmigo />} />
+        <Route path="/perfil/:amigoId" element={<PerfilAmigo />} />
         <Route path="/admin" element={<AdminPanel />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/social" element={<RedSocial />} />
       </Routes>
     </HashRouter>
   </StrictMode>

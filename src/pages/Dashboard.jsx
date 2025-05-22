@@ -11,7 +11,6 @@ import {
   CartesianGrid,
   BarChart,
   Bar,
-  Legend,
 } from "recharts";
 
 export default function Dashboard() {
@@ -20,35 +19,47 @@ export default function Dashboard() {
   const [totalUsuarios, setTotalUsuarios] = useState(0);
 
   useEffect(() => {
-    // 1) Series añadidas por día (últimos 14 días)
-    supabase
-      .rpc("conteo_series_por_dia")
-      .then(({ data, error }) => {
-        if (error) return console.error("RPC series por día:", error);
-        // data = [{ fecha: "2025-05-20", total: 3 }, …]
-        setSeriesPorDia(data);
-      });
+    // 1) Series añadidas por día (RPC SQL que agrupa created_at::date)
+    supabase.rpc("conteo_series_por_dia").then(({ data, error }) => {
+      if (error) return console.error("RPC series por día:", error);
+      // data = [{ fecha: "2025-05-20", total: 3 }, …]
+      setSeriesPorDia(
+        data.map((d) => ({
+          fecha: d.fecha, // "YYYY-MM-DD"
+          total: d.total,
+        }))
+      );
+    });
 
-    // 2) Top 5 series más populares
+    // 2) Top 5 series más populares (agrupado en el cliente)
     supabase
       .from("catalogo_usuario")
-      .select("contenido_id", { count: "exact" })
-      .group("contenido_id")
-      .order("count", { ascending: false })
-      .limit(5)
-      .then(async ({ data, error }) => {
-        if (error) return console.error("Top series:", error);
-        // data = [{ contenido_id: 123, count: 42 }, …]
+      .select("contenido_id")
+      .then(async ({ data: allCat, error }) => {
+        if (error) return console.error("Error leyendo catálogo:", error);
+
+        // Conteo de apariciones por contenido_id
+        const counts = allCat.reduce((acc, { contenido_id }) => {
+          acc[contenido_id] = (acc[contenido_id] || 0) + 1;
+          return acc;
+        }, {});
+
+        // Ordenamos y tomamos top 5
+        const top5 = Object.entries(counts)
+          .sort(([, a], [, b]) => b - a)
+          .slice(0, 5);
+
+        // Traemos el nombre para cada contenido_id
         const detalles = await Promise.all(
-          data.map(async (row) => {
+          top5.map(async ([contenido_id, total]) => {
             const { data: c, error: err } = await supabase
               .from("contenido")
               .select("nombre")
-              .eq("id", row.contenido_id)
+              .eq("id", contenido_id)
               .single();
             return {
-              nombre: err ? `ID ${row.contenido_id}` : c.nombre,
-              total: row.count,
+              nombre: err ? `ID ${contenido_id}` : c.nombre,
+              total,
             };
           })
         );
@@ -58,24 +69,23 @@ export default function Dashboard() {
     // 3) Total de usuarios
     supabase
       .from("usuarios")
-      .select("id", { count: "exact", head: true })
+      .select("id", { head: true, count: "exact" })
       .then(({ count, error }) => {
-        if (error) return console.error("Total usuarios:", error);
+        if (error) return console.error("Error usuarios:", error);
         setTotalUsuarios(count || 0);
       });
   }, []);
 
   return (
     <div className="p-4 space-y-8">
-      {/* Estadística numérica */}
+      {/* 𝗧𝗼𝗱𝗮𝗹 𝗨𝘀𝘂𝗮𝗿𝗶𝗼𝗻𝗲𝘀 */}
       <div className="bg-white p-6 rounded-lg shadow text-center">
         <h2 className="text-xl font-semibold mb-2">Total de usuarios</h2>
         <p className="text-4xl font-bold">{totalUsuarios}</p>
       </div>
 
-      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Series añadidas por día */}
+        {/* 𝗦𝗲𝗿𝗶𝗲𝘀 𝗽𝗼𝗿 𝗱𝗶𝗮 */}
         <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-lg font-semibold mb-2">
             Series añadidas por día
@@ -115,14 +125,16 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Top 5 series más populares */}
+        {/* 𝗧𝗼𝗽 5 𝗦𝗲𝗿𝗶𝗲𝘀 */}
         <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-lg font-semibold mb-2">
-            Series más populares
-          </h2>
+          <h2 className="text-lg font-semibold mb-2">Series más populares</h2>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={topSeries} layout="vertical" margin={{ left: 40 }}>
+              <BarChart
+                data={topSeries}
+                layout="vertical"
+                margin={{ left: 40 }}
+              >
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis type="number" />
                 <YAxis
@@ -132,7 +144,6 @@ export default function Dashboard() {
                   tick={{ fontSize: 12 }}
                 />
                 <Tooltip />
-                <Legend />
                 <Bar dataKey="total" fill="#10b981" name="Veces añadido" />
               </BarChart>
             </ResponsiveContainer>
