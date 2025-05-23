@@ -1,4 +1,3 @@
-// src/pages/PerfilAmigo.jsx
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../utils/supabaseClient";
@@ -7,7 +6,7 @@ import MediaCard from "../components/MediaCard";
 import Footer from "../components/Footer";
 
 export default function PerfilAmigo() {
-  const { amigoId } = useParams();
+  const { nick } = useParams(); // Ahora recibimos el nick por la URL
   const navigate = useNavigate();
 
   const [usuario, setUsuario] = useState(null);
@@ -44,11 +43,11 @@ export default function PerfilAmigo() {
       setComparte(false);
       setCatalogo([]);
 
-      // 2.1) Obtener datos básicos del amigo
+      // 2.1) Obtener datos básicos del amigo por nick
       const { data: perfil, error: errPerfil } = await supabase
         .from("usuarios")
-        .select("nick, avatar")
-        .eq("id", amigoId)
+        .select("id, nick, avatar")
+        .eq("nick", nick)
         .single();
 
       if (errPerfil || !perfil) {
@@ -57,6 +56,7 @@ export default function PerfilAmigo() {
         return;
       }
       setPerfilAmigo(perfil);
+      const amigoId = perfil.id;
 
       // 2.2) Verificar relación de amistad y su estado
       const { data: rel } = await supabase
@@ -105,27 +105,35 @@ export default function PerfilAmigo() {
       }
 
       // 2.5) Mapear traducciones al idioma preferido
-      const resultados = items.map((it) => {
-        const trad =
-          it.contenido.contenido_traducciones?.find(
-            (t) => t.idioma === idioma
-          ) || {};
-        return {
-          id: it.contenido.id,
-          nombre: trad.nombre || "Sin título",
-          sinopsis: trad.sinopsis || "Sin información disponible.",
-          imagen: it.contenido.imagen,
-          anio: it.contenido.anio,
-          tipo: it.contenido.tipo,
-        };
-      });
+
+      const resultados = (items || [])
+        .filter((it) => it.contenido)
+        .map((it) => {
+          const trad =
+            it.contenido.contenido_traducciones?.find(
+              (t) => t.idioma === idioma
+            ) || {};
+          return {
+            id: it.contenido.id,
+            nombre: trad.nombre || it.contenido.nombre || "Sin título",
+            sinopsis:
+              trad.sinopsis ||
+              it.contenido.sinopsis ||
+              "Sin información disponible.",
+            imagen: it.contenido.imagen,
+            anio: it.contenido.anio,
+            tipo: it.contenido.tipo,
+          };
+        });
+
+      setCatalogo(resultados);
 
       setCatalogo(resultados);
       setLoading(false);
     };
 
     cargarPerfil();
-  }, [usuario, amigoId, idioma]);
+  }, [usuario, nick, idioma]);
 
   return (
     <>

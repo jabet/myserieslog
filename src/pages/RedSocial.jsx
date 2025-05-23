@@ -94,17 +94,17 @@ export default function RedSocial() {
         `and(usuario1.eq.${uid},estado.eq.aceptada),` +
           `and(usuario2.eq.${uid},estado.eq.aceptada)`
       );
+    console.log(data);
     if (error) {
       console.error("Cargar amigos:", error);
       return;
     }
     const lista = (data || []).map((a) => {
       const esYo1 = a.usuario1 === uid;
-      const arr = esYo1 ? a.usuarios2 : a.usuarios1;
-      const amigo =
-        Array.isArray(arr) && arr.length > 0
-          ? arr[0]
-          : { id: esYo1 ? a.usuario2 : a.usuario1, nick: "—" };
+      const amigoObj = esYo1 ? a.usuarios2 : a.usuarios1;
+      const amigo = amigoObj
+        ? amigoObj
+        : { id: esYo1 ? a.usuario2 : a.usuario1, nick: "—" };
       return {
         amistadId: a.id,
         amigoId: amigo.id,
@@ -296,7 +296,7 @@ export default function RedSocial() {
                   className="flex items-center justify-between bg-white p-2 rounded shadow"
                 >
                   <span
-                    onClick={() => navigate(`/perfil/${a.amigoId}`)}
+                    onClick={() => navigate(`/perfil/${a.nick}`)}
                     className="cursor-pointer text-blue-600 hover:underline"
                   >
                     {a.nick}

@@ -1,49 +1,31 @@
-// src/pages/Detalle.jsx
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "../utils/supabaseClient";
-import { detectarTipo } from "../utils/tmdbTypeDetector";
 import Navbar from "../components/Navbar";
 import EpisodiosPorTemporada from "../components/EpisodiosPorTemporada";
 import SelectorEstado from "../components/SelectorEstado";
 import Footer from "../components/Footer";
 import MensajeFlotante from "../components/MensajeFlotante";
 import { StarIcon, StarFilledIcon } from "@radix-ui/react-icons";
+import useUsuario from "../hooks/useUsuario";
+import useTMDBDetalle from "../hooks/useTMDBDetalle";
 
 export default function Detalle() {
   const { id } = useParams();
+  const { usuario, idioma } = useUsuario();
   const [item, setItem] = useState(null);
   const [enCatalogo, setEnCatalogo] = useState(false);
   const [estadoCatalogo, setEstadoCatalogo] = useState(null);
   const [favorito, setFavorito] = useState(false);
-  const [usuario, setUsuario] = useState(null);
   const [vistos, setVistos] = useState([]);
   const [mensaje, setMensaje] = useState("");
-  const [idioma, setIdioma] = useState("es");
-  const TMDB_KEY = import.meta.env.VITE_TMDB_API_KEY;
-  const TMDB_BASE = "https://api.themoviedb.org/3";
 
-  // 1) Cargo usuario y preferencias de idioma
-  useEffect(() => {
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      setUsuario(user);
-      if (!user) return;
-      const { data: pref } = await supabase
-        .from("preferencias_usuario")
-        .select("idioma_preferido")
-        .eq("user_id", user.id)
-        .single();
-      if (pref?.idioma_preferido) {
-        const lang = pref.idioma_preferido;
-        setIdioma(lang.length === 2 ? `${lang}-${lang.toUpperCase()}` : lang);
-      }
-    });
-  }, []);
+  // Hook para obtener detalle de TMDb
+  const { detalle: tmdbDetalle } = useTMDBDetalle(id, idioma);
 
-  // 2) Cargo el contenido y la sinopsis traducida (A)
+  // 1) Cargo el contenido y la sinopsis traducida (A)
   useEffect(() => {
     const cargarItem = async () => {
-      // 2.1) Intento Supabase
       const { data, error } = await supabase
         .from("contenido")
         .select("*")
@@ -51,15 +33,7 @@ export default function Detalle() {
         .single();
 
       if (data && !error) {
-        let tipo = data.tipo;
-        // Si no tengo tipo, detecto con TMDb (omitido aquí por brevedad)
-        if (!tipo) {
-          // … lógica detectarTipo y actualizar campo tipo …
-        }
-
-        // ——— Aquí empieza el bloque (A) ———
-        // 2.2) Traigo la traducción para sinopsis (y nombre, si quieres)
-        const { data: trad, error: errTrad } = await supabase
+        const { data: trad } = await supabase
           .from("contenido_traducciones")
           .select("nombre, sinopsis")
           .eq("contenido_id", data.id)
@@ -68,58 +42,22 @@ export default function Detalle() {
 
         setItem({
           ...data,
-          tipo,
           nombre: trad?.nombre || data.nombre,
           sinopsis: trad?.sinopsis || data.sinopsis || "Sin sinopsis.",
         });
         return;
       }
-      // ——— Aquí termina el bloque (A) ———
 
-      // 2.3) Fallback completo a TMDb (igual que antes)
-      let mediaType = "tv";
-      let res = await fetch(
-        `${TMDB_BASE}/tv/${id}?api_key=${TMDB_KEY}&language=${idioma}`
-      );
-      let tmdb = await res.json();
-      if (tmdb.success === false) {
-        mediaType = "movie";
-        res = await fetch(
-          `${TMDB_BASE}/movie/${id}?api_key=${TMDB_KEY}&language=${idioma}`
-        );
-        tmdb = await res.json();
+      // Si no hay en Supabase, usa el detalle de TMDb (del hook)
+      if (tmdbDetalle) {
+        setItem(tmdbDetalle);
       }
-      const tipoDetect = detectarTipo(
-        {
-          ...tmdb,
-          genre_ids: tmdb.genre_ids || tmdb.genres?.map((g) => g.id) || [],
-          original_language: tmdb.original_language,
-          origin_country: tmdb.origin_country || [],
-        },
-        mediaType
-      );
-
-      setItem({
-        id: tmdb.id,
-        nombre: tmdb.name || tmdb.title,
-        tipo: tipoDetect,
-        sinopsis: tmdb.overview || "Sin sinopsis.",
-        anio:
-          (mediaType === "tv" ? tmdb.first_air_date : tmdb.release_date)?.slice(
-            0,
-            4
-          ) || "Desconocido",
-        imagen: tmdb.poster_path
-          ? `https://image.tmdb.org/t/p/w500${tmdb.poster_path}`
-          : null,
-        finalizada: mediaType === "tv" ? tmdb.status === "Ended" : true,
-      });
     };
 
     cargarItem();
-  }, [id, idioma]);
+  }, [id, idioma, tmdbDetalle]);
 
-  // 3) Estado en catálogo y favorito
+  // 2) Estado en catálogo y favorito
   useEffect(() => {
     if (!usuario || !item) return;
     supabase
@@ -133,13 +71,20 @@ export default function Detalle() {
           setEnCatalogo(true);
           setEstadoCatalogo(data.estado);
           setFavorito(data.favorito);
+        } else {
+          setEnCatalogo(false);
+          setEstadoCatalogo(null);
+          setFavorito(false);
         }
       });
   }, [usuario, item]);
 
-  // 4) Carga episodios vistos
+  // 3) Carga episodios vistos
   useEffect(() => {
-    if (!usuario) return;
+    if (!usuario) {
+      setVistos([]);
+      return;
+    }
     supabase
       .from("episodios_vistos")
       .select("episodio_id")
@@ -152,7 +97,7 @@ export default function Detalle() {
     setTimeout(() => setMensaje(""), 3000);
   };
 
-  // 5) Añadir / quitar del catálogo
+  // 4) Añadir / quitar del catálogo
   const toggleCatalogo = async () => {
     if (!usuario || !item) {
       mostrar("Inicia sesión para gestionar tu catálogo");
@@ -182,7 +127,7 @@ export default function Detalle() {
     }
   };
 
-  // 6) Cambiar estado (pendiente / viendo / vista)
+  // 5) Cambiar estado (pendiente / viendo / vista)
   const cambiarEstado = async (nuevo) => {
     await supabase
       .from("catalogo_usuario")
@@ -199,7 +144,7 @@ export default function Detalle() {
     );
   };
 
-  // 7) Marcar / desmarcar favorito
+  // 6) Marcar / desmarcar favorito
   const toggleFavorito = async () => {
     if (!usuario) {
       mostrar("Inicia sesión para marcar favoritos");
@@ -215,7 +160,7 @@ export default function Detalle() {
     mostrar(nuevo ? "Añadido a favoritos" : "Eliminado de favoritos");
   };
 
-  // 8) Marcar episodio visto / no visto
+  // 7) Marcar episodio visto / no visto
   const toggleVisto = async (episodioId) => {
     if (!usuario) {
       mostrar("Inicia sesión para marcar episodios");
@@ -240,7 +185,14 @@ export default function Detalle() {
     setVistos(data || []);
   };
 
-  if (!item) return <p className="pt-20 p-4 text-center">Cargando detalle…</p>;
+  if (!item) {
+    return (
+      <>
+        <MensajeFlotante texto="Cargando detalle…" />
+        <p className="pt-20 p-4 text-center">Cargando detalle…</p>
+      </>
+    );
+  }
 
   return (
     <>
@@ -250,7 +202,13 @@ export default function Detalle() {
         <div className="flex items-center gap-2 mb-4">
           <h1 className="text-3xl font-bold">{item.nombre}</h1>
           {enCatalogo && (
-            <button onClick={toggleFavorito} className="ml-2">
+            <button
+              onClick={toggleFavorito}
+              className="ml-2"
+              aria-label={
+                favorito ? "Quitar de favoritos" : "Añadir a favoritos"
+              }
+            >
               {favorito ? (
                 <StarFilledIcon className="w-6 h-6 text-yellow-500" />
               ) : (
@@ -269,10 +227,10 @@ export default function Detalle() {
         )}
 
         <p className="mb-2">
-          <strong>Año:</strong> {item.anio}
+          <strong>Año:</strong> {item.anio || "Desconocido"}
         </p>
         <p className="mb-2">
-          <strong>Tipo:</strong> {item.tipo}
+          <strong>Tipo:</strong> {item.tipo || "Desconocido"}
         </p>
         {item.finalizada !== undefined && (
           <p className="mb-2">
@@ -292,6 +250,9 @@ export default function Detalle() {
               ? "bg-red-600 hover:bg-red-700"
               : "bg-green-600 hover:bg-green-700"
           }`}
+          aria-label={
+            enCatalogo ? "Eliminar de mi catálogo" : "Añadir a mi catálogo"
+          }
         >
           {enCatalogo ? "Eliminar de mi catálogo" : "Añadir a mi catálogo"}
         </button>
@@ -308,7 +269,7 @@ export default function Detalle() {
           </div>
         )}
 
-        <MensajeFlotante texto={mensaje} />
+        {mensaje && <MensajeFlotante texto={mensaje} />}
 
         {["Serie", "Anime", "Dorama", "K-Drama"].includes(item.tipo) && (
           <section className="mt-8">
@@ -317,6 +278,7 @@ export default function Detalle() {
               vistos={vistos}
               toggle={toggleVisto}
               idioma={idioma}
+              usuario={usuario}
             />
           </section>
         )}

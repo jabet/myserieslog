@@ -22,7 +22,7 @@ createRoot(document.getElementById("root")).render(
         <Route path="/login" element={<Login />} />
         <Route path="/detalle/:id" element={<Detalle />} />
         <Route path="/preferencias" element={<PreferenciasUsuario />} />
-        <Route path="/perfil/:amigoId" element={<PerfilAmigo />} />
+        <Route path="/perfil/:nick" element={<PerfilAmigo />} />
         <Route path="/admin" element={<AdminPanel />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/social" element={<RedSocial />} />

@@ -7,8 +7,8 @@ export default function MediaCard({
   imagen,
   anio,
   tipo,
-  estado,       // ← nuevo prop: "pendiente" | "viendo" | "vista"
   favorito,
+  viendo,
   onEliminar,
   onVerDetalle,
 }) {
@@ -35,52 +35,41 @@ export default function MediaCard({
   }
 
   return (
-    <div className="relative w-40 bg-white rounded shadow hover:shadow-md transition cursor-pointer">
-      {/* Badge de tipo */}
-      <span
-        className={`${bgTipo} text-white text-xs font-semibold px-2 py-0.5 rounded-br`}
-      >
-        {tipo}
-      </span>
-
-      {/* Imagen */}
-      <img
-        src={imagen}
-        alt={nombre}
-        className="w-full h-56 object-cover rounded-t"
+    <div className="relative w-full max-w-xs bg-white shadow rounded overflow-hidden hover:shadow-lg transition">
+      {viendo && (
+        <div className="absolute top-2 right-2 bg-black bg-opacity-60 rounded-full p-1">
+          <EyeOpenIcon className="text-white w-4 h-4" />
+        </div>
+      )}
+      <button
         onClick={onVerDetalle}
-      />
-
-      {/* Contenido */}
-      <div className="p-2">
-        <h3
-          className="text-sm font-medium mb-1 hover:underline line-clamp-1"
-          onClick={onVerDetalle}
-        >
-          {nombre}
-        </h3>
-        <p className="text-xs text-gray-500 mb-2">{anio}</p>
-
-        <div className="flex justify-between items-center">
-          {/* Icono de "viendo" */}
-          {estado === "viendo" && (
-            <EyeOpenIcon className="w-5 h-5 text-blue-600" />
-          )}
-
-          {/* Icono favorito */}
-          {favorito && <span className="text-red-500">❤️</span>}
-
-          {/* Botón eliminar */}
-          {onEliminar && (
-            <button
-              onClick={onEliminar}
-              className="text-xs text-gray-400 hover:text-red-500"
+        className="focus:outline-none w-full text-left"
+      >
+        <img
+          src={imagen || "/placeholder.jpg"}
+          alt={nombre}
+          className="w-full max-h-[407px]"
+        />
+        <div className="p-3">
+          <h2 className="text-md font-semibold line-clamp-1">{nombre}</h2>
+          <p className="text-sm text-gray-600">{anio}</p>
+          {tipo && (
+            <span
+              className={`inline-block text-white text-xs font-semibold px-2 py-0.5 rounded-b ${bgTipo} || "bg-gray-200 text-gray-700"}`}
             >
-              Eliminar
-            </button>
+              {tipo}
+            </span>
           )}
         </div>
-      </div>
+      </button>
+      {onEliminar && (
+        <button
+          onClick={onEliminar}
+          className="absolute bottom-2 right-2 text-xs text-red-600 hover:underline"
+        >
+          Eliminar
+        </button>
+      )}
     </div>
   );
 }

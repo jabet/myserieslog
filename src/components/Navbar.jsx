@@ -68,8 +68,8 @@ export default function Navbar() {
               <Link to="/preferencias" className="text-sm hover:underline">
                 Preferencias
               </Link>
-              <Link to="/amigos" className="text-sm hover:underline">
-                Amigos
+              <Link to="/social" className="text-sm hover:underline">
+                Social
               </Link>
               {usuario && perfil?.role === "admin" && (
                 <Link to="/admin" className="text-sm hover:underline">
@@ -116,8 +116,8 @@ export default function Navbar() {
                 </Link>
               </li>
               <li>
-                <Link to="/amigos" onClick={() => setMenuOpen(false)}>
-                  Amigos
+                <Link to="/social" onClick={() => setMenuOpen(false)}>
+                  Social
                 </Link>
               </li>
               {usuario && perfil?.role === "admin" && (
