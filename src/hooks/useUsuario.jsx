@@ -14,7 +14,7 @@ export default function useUsuario() {
       } = await supabase.auth.getUser();
       setUsuario(user);
 
-      if (!usuario) return;
+      if (!user) return;
 
       if (user) {
         const { data: pref } = await supabase

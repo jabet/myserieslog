@@ -6,7 +6,7 @@ export default function CatalogoGrid({ catalogo, onEliminar }) {
   if (!Array.isArray(catalogo)) return null;
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 items-start justify-items-center">
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4 items-start justify-items-center max-w-7xl m-auto">
       {catalogo.map((item) => (
         <MediaCard
           key={item.id_catalogo || item.id}

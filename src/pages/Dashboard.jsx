@@ -1,6 +1,9 @@
 // src/pages/Dashboard.jsx
 import { useEffect, useState } from "react";
 import { supabase } from "../utils/supabaseClient";
+import  useUsuario  from "../hooks/useUsuario";
+import useProximasEmisiones from "../hooks/useProximasEmisiones";
+import ProximasEmisiones from "../components/ProximasEmisiones";
 import {
   ResponsiveContainer,
   LineChart,
@@ -14,9 +17,11 @@ import {
 } from "recharts";
 
 export default function Dashboard() {
+  const { usuario } = useUsuario();
   const [seriesPorDia, setSeriesPorDia] = useState([]);
   const [topSeries, setTopSeries] = useState([]);
   const [totalUsuarios, setTotalUsuarios] = useState(0);
+  const { proximos, loading } = useProximasEmisiones(usuario);
 
   useEffect(() => {
     // 1) Series añadidas por día (RPC SQL que agrupa created_at::date)
@@ -149,6 +154,11 @@ export default function Dashboard() {
             </ResponsiveContainer>
           </div>
         </div>
+        {loading ? (
+          <p className="text-gray-500">Cargando...</p>
+        ) : (
+          <ProximasEmisiones emisiones={proximos} />
+        )}
       </div>
     </div>
   );

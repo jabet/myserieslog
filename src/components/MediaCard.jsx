@@ -38,7 +38,7 @@ export default function MediaCard({
     <div className="relative w-full max-w-xs bg-white shadow rounded overflow-hidden hover:shadow-lg transition">
       {viendo && (
         <div className="absolute top-2 right-2 bg-black bg-opacity-60 rounded-full p-1">
-          <EyeOpenIcon className="text-white w-4 h-4" />
+          <EyeOpenIcon className="text-white w-3 h-3" />
         </div>
       )}
       <button
@@ -51,17 +51,17 @@ export default function MediaCard({
           className="w-full max-h-[407px]"
         />
         <div className="p-3">
-          <h2 className="text-md font-semibold line-clamp-1">{nombre}</h2>
-          <p className="text-sm text-gray-600">{anio}</p>
-          {tipo && (
-            <span
-              className={`inline-block text-white text-xs font-semibold px-2 py-0.5 rounded-b ${bgTipo} || "bg-gray-200 text-gray-700"}`}
-            >
-              {tipo}
-            </span>
-          )}
+          <h2 className="text-sm font-semibold line-clamp-1">{nombre}</h2>
+          <p className="text-xs text-gray-600">{anio}</p>
         </div>
       </button>
+      {tipo && (
+        <span
+          className={`inline-block text-white text-xs font-semibold px-2 py-0.5 rounded-b ${bgTipo} || "bg-gray-200 text-gray-700"}`}
+        >
+          {tipo}
+        </span>
+      )}
       {onEliminar && (
         <button
           onClick={onEliminar}

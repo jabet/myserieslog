@@ -27,23 +27,24 @@ export default function useCatalogoUsuario(usuario, idiomaPreferido) {
           .from("catalogo_usuario")
           .select(
             `
-            id,
-            contenido_id,
-            estado,
-            favorito,
-            contenido:contenido (
               id,
-              imagen,
-              tipo,
-              anio,
-              nombre,
-              contenido_traducciones!contenido_id (
-                idioma,
+              contenido_id,
+              estado,
+              favorito,
+              puntuacion,
+              contenido:contenido (
+                id,
+                imagen,
+                tipo,
+                anio,
                 nombre,
-                sinopsis
+                contenido_traducciones!contenido_id (
+                  idioma,
+                  nombre,
+                  sinopsis
+                )
               )
-            )
-          `
+            `
           )
           .eq("user_id", usuario.id);
 
@@ -63,7 +64,7 @@ export default function useCatalogoUsuario(usuario, idiomaPreferido) {
             const traduccion = item.contenido?.contenido_traducciones?.find(
               (t) => t.idioma === idiomaPreferido
             );
-            
+
             return {
               id_catalogo: item.id,
               id: item.contenido?.id,
@@ -75,6 +76,7 @@ export default function useCatalogoUsuario(usuario, idiomaPreferido) {
               sinopsis: traduccion?.sinopsis || item.contenido?.sinopsis || "",
               estado: item.estado || "quiero ver",
               favorito: item.favorito || false,
+              puntuacion: item.puntuacion ?? 0,
             };
           })
         );
@@ -108,11 +110,17 @@ export default function useCatalogoUsuario(usuario, idiomaPreferido) {
   }, [catalogo]);
 
   // FUNCIÓN PARA APLICAR FILTROS
-  function aplicarFiltros({ tipo, anio, estado }) {
+  function aplicarFiltros({ tipo, anio, estado, texto }) {
     let filtrado = [...catalogo];
     if (tipo) filtrado = filtrado.filter((item) => item.tipo === tipo);
     if (anio) filtrado = filtrado.filter((item) => item.anio === anio);
     if (estado) filtrado = filtrado.filter((item) => item.estado === estado);
+    if (texto && texto.trim() !== "") {
+      const txt = texto.trim().toLowerCase();
+      filtrado = filtrado.filter((item) =>
+        item.nombre?.toLowerCase().includes(txt)
+      );
+    }
     setCatalogoFiltrado(filtrado);
   }
 
@@ -125,6 +133,7 @@ export default function useCatalogoUsuario(usuario, idiomaPreferido) {
     estadosDisponibles,
     loading,
     error,
-    aplicarFiltros, // <-- exporta la función
+    aplicarFiltros,
+
   };
 }

@@ -10,6 +10,7 @@ export default function FiltrosCatalogo({
   const [filtroTipo, setFiltroTipo] = useState("");
   const [filtroAnio, setFiltroAnio] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("");
+  const [filtroTexto, setFiltroTexto] = useState("");
 
   useEffect(() => {
     if (onFiltrar) {
@@ -17,9 +18,10 @@ export default function FiltrosCatalogo({
         tipo: filtroTipo,
         anio: filtroAnio,
         estado: filtroEstado,
+        texto: filtroTexto,
       });
     }
-  }, [filtroTipo, filtroAnio, filtroEstado]);
+  }, [filtroTipo, filtroAnio, filtroEstado, filtroTexto]);
 
   return (
     <div className="mb-6 flex flex-col md:flex-row gap-4">
@@ -61,6 +63,13 @@ export default function FiltrosCatalogo({
           </option>
         ))}
       </select>
+         <input
+        type="text"
+        className="border px-3 py-2 rounded"
+        placeholder="Buscar por nombre..."
+        value={filtroTexto}
+        onChange={(e) => setFiltroTexto(e.target.value)}
+      />
     </div>
   );
 }

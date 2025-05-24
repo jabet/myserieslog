@@ -5,6 +5,7 @@ import Navbar from "../components/Navbar";
 import EpisodiosPorTemporada from "../components/EpisodiosPorTemporada";
 import SelectorEstado from "../components/SelectorEstado";
 import Footer from "../components/Footer";
+import Estrellas from "../components/Estrella";
 import MensajeFlotante from "../components/MensajeFlotante";
 import { StarIcon, StarFilledIcon } from "@radix-ui/react-icons";
 import useUsuario from "../hooks/useUsuario";
@@ -62,14 +63,14 @@ export default function Detalle() {
     if (!usuario || !item) return;
     supabase
       .from("catalogo_usuario")
-      .select("estado, favorito")
+      .select("estado, favorito, puntuacion")
       .eq("user_id", usuario.id)
       .eq("contenido_id", item.id)
       .maybeSingle()
       .then(({ data }) => {
         if (data) {
           setEnCatalogo(true);
-          setEstadoCatalogo(data.estado);
+          setEstadoCatalogo(data); // Guardar el objeto completo
           setFavorito(data.favorito);
         } else {
           setEnCatalogo(false);
@@ -123,7 +124,11 @@ export default function Detalle() {
         },
       ]);
       setEnCatalogo(true);
-      setEstadoCatalogo("pendiente");
+      setEstadoCatalogo({
+        estado: "pendiente",
+        favorito: false,
+        puntuacion: 0,
+      });
     }
   };
 
@@ -134,7 +139,7 @@ export default function Detalle() {
       .update({ estado: nuevo })
       .eq("user_id", usuario.id)
       .eq("contenido_id", item.id);
-    setEstadoCatalogo(nuevo);
+    setEstadoCatalogo((prev) => ({ ...prev, estado: nuevo }));
     mostrar(
       nuevo === "pendiente"
         ? "Añadida a “Lo quiero ver”"
@@ -157,6 +162,7 @@ export default function Detalle() {
       .eq("user_id", usuario.id)
       .eq("contenido_id", item.id);
     setFavorito(nuevo);
+    setEstadoCatalogo((prev) => ({ ...prev, favorito: nuevo }));
     mostrar(nuevo ? "Añadido a favoritos" : "Eliminado de favoritos");
   };
 
@@ -183,6 +189,21 @@ export default function Detalle() {
       .select("episodio_id")
       .eq("user_id", usuario.id);
     setVistos(data || []);
+  };
+
+  // 8) Guardar puntuación
+  const guardarPuntuacion = async (contenidoId, puntuacion) => {
+    const { error } = await supabase
+      .from("catalogo_usuario")
+      .update({ puntuacion })
+      .eq("user_id", usuario.id)
+      .eq("contenido_id", contenidoId);
+
+    if (error) {
+      console.error("Error guardando puntuación:", error);
+    } else {
+      setEstadoCatalogo((prev) => ({ ...prev, puntuacion }));
+    }
   };
 
   if (!item) {
@@ -262,13 +283,21 @@ export default function Detalle() {
             <div>
               <label className="text-sm font-medium mr-2">Estado:</label>
               <SelectorEstado
-                estado={estadoCatalogo}
+                estado={estadoCatalogo?.estado}
                 onChange={cambiarEstado}
               />
             </div>
           </div>
         )}
-
+        <section className="flex items-baseline" >
+        <Estrellas
+          valor={estadoCatalogo?.puntuacion || 0}
+          onChange={(nueva) => guardarPuntuacion(item.id, nueva)}
+        />
+        <span className="ml-2 text-sm text-gray-700 align-middle">
+          {estadoCatalogo?.puntuacion || 0} / 5
+        </span>
+        </section>
         {mensaje && <MensajeFlotante texto={mensaje} />}
 
         {["Serie", "Anime", "Dorama", "K-Drama"].includes(item.tipo) && (
