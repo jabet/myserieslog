@@ -302,16 +302,18 @@ export default function RedSocial() {
                     {a.nick}
                   </span>
                   <div className="flex items-center gap-2">
-                    <label className="text-sm">Compartir</label>
-                    <Switch
-                      checked={a.comparte}
-                      onCheckedChange={() =>
-                        toggleCompartir(a.amistadId, a.comparte)
-                      }
-                      className="w-12 h-6 bg-gray-200 rounded-full data-[state=checked]:bg-green-500"
-                    >
-                      <span className="block w-6 h-6 bg-white rounded-full shadow transition-transform data-[state=checked]:translate-x-6" />
-                    </Switch>
+                    <label className="text-sm">Compartir catálogo</label>
+ <Switch
+  checked={a.comparte}
+  onCheckedChange={() => toggleCompartir(a.amistadId, a.comparte)}
+  className="w-12 h-6 bg-gray-200 rounded-full data-[state=checked]:bg-green-500 relative"
+>
+  <span
+    className="block w-6 h-6 bg-white rounded-full shadow transition-transform absolute top-0 left-0
+      data-[state=checked]:translate-x-6"
+    data-state={a.comparte ? "checked" : "unchecked"}
+  />
+</Switch>
                   </div>
                 </li>
               ))}
