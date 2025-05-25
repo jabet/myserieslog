@@ -36,6 +36,7 @@ export default function useCatalogoUsuario(usuario, idiomaPreferido) {
                 id,
                 imagen,
                 tipo,
+                media_type,
                 anio,
                 nombre,
                 contenido_traducciones!contenido_id (
@@ -70,6 +71,7 @@ export default function useCatalogoUsuario(usuario, idiomaPreferido) {
               id: item.contenido?.id,
               imagen: item.contenido?.imagen,
               tipo: item.contenido?.tipo,
+              media_type: item.contenido?.media_type,
               anio: item.contenido?.anio,
               nombre:
                 traduccion?.nombre || item.contenido?.nombre || "Sin título",
@@ -134,6 +136,5 @@ export default function useCatalogoUsuario(usuario, idiomaPreferido) {
     loading,
     error,
     aplicarFiltros,
-
   };
 }

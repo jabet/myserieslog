@@ -43,7 +43,7 @@ export default function MediaCard({
         </div>
       )}
       <button
-        onClick={onVerDetalle}
+        onClick={() => onVerDetalle(media_type)}
         className="focus:outline-none w-full text-left"
       >
         <img
