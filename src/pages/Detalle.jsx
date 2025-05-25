@@ -12,7 +12,7 @@ import useUsuario from "../hooks/useUsuario";
 import useTMDBDetalle from "../hooks/useTMDBDetalle";
 
 export default function Detalle() {
-  const { id } = useParams();
+  const { tipo, id } = useParams();
   const { usuario, idioma } = useUsuario();
   const [item, setItem] = useState(null);
   const [enCatalogo, setEnCatalogo] = useState(false);
@@ -22,15 +22,17 @@ export default function Detalle() {
   const [mensaje, setMensaje] = useState("");
 
   // Hook para obtener detalle de TMDb
-  const { detalle: tmdbDetalle } = useTMDBDetalle(id, idioma);
+  const { detalle: tmdbDetalle } = useTMDBDetalle(id, idioma, tipo);
 
   // 1) Cargo el contenido y la sinopsis traducida (A)
   useEffect(() => {
     const cargarItem = async () => {
+      // Busca en la tabla de catálogo/caché usando id y tipo
       const { data, error } = await supabase
         .from("contenido")
         .select("*")
         .eq("id", Number(id))
+        .eq("media_type", tipo)
         .single();
 
       if (data && !error) {
@@ -56,7 +58,7 @@ export default function Detalle() {
     };
 
     cargarItem();
-  }, [id, idioma, tmdbDetalle]);
+  }, [id, tipo, idioma, tmdbDetalle]);
 
   // 2) Estado en catálogo y favorito
   useEffect(() => {
@@ -70,7 +72,7 @@ export default function Detalle() {
       .then(({ data }) => {
         if (data) {
           setEnCatalogo(true);
-          setEstadoCatalogo(data); // Guardar el objeto completo
+          setEstadoCatalogo(data);
           setFavorito(data.favorito);
         } else {
           setEnCatalogo(false);
@@ -114,6 +116,31 @@ export default function Detalle() {
       setEstadoCatalogo(null);
       setFavorito(false);
     } else {
+      // 1. Guarda en la tabla de catálogo/caché si no existe
+      const { data: existente } = await supabase
+        .from("contenido")
+        .select("id")
+        .eq("id", item.id)
+        .eq("media_tpe", tipo)
+        .maybeSingle();
+
+      if (!existente) {
+        await supabase.from("contenido").insert([
+          {
+            id: item.id,
+            tipo: item.tipo,
+            media_type: tipo,
+            nombre: item.nombre,
+            imagen: item.imagen,
+            sinopsis: item.sinopsis,
+            anio: item.anio,
+            finalizada: item.finalizada,
+            // ...otros campos relevantes
+          },
+        ]);
+      }
+
+      // 2. Guarda la relación usuario-contenido
       await supabase.from("catalogo_usuario").insert([
         {
           user_id: usuario.id,
@@ -129,6 +156,7 @@ export default function Detalle() {
         favorito: false,
         puntuacion: 0,
       });
+      setFavorito(false);
     }
   };
 
@@ -153,6 +181,10 @@ export default function Detalle() {
   const toggleFavorito = async () => {
     if (!usuario) {
       mostrar("Inicia sesión para marcar favoritos");
+      return;
+    }
+    if (!enCatalogo) {
+      mostrar("Añade primero al catálogo para marcar como favorito");
       return;
     }
     const nuevo = !favorito;
@@ -289,14 +321,14 @@ export default function Detalle() {
             </div>
           </div>
         )}
-        <section className="flex items-baseline" >
-        <Estrellas
-          valor={estadoCatalogo?.puntuacion || 0}
-          onChange={(nueva) => guardarPuntuacion(item.id, nueva)}
-        />
-        <span className="ml-2 text-sm text-gray-700 align-middle">
-          {estadoCatalogo?.puntuacion || 0} / 5
-        </span>
+        <section className="flex items-baseline">
+          <Estrellas
+            valor={estadoCatalogo?.puntuacion || 0}
+            onChange={(nueva) => guardarPuntuacion(item.id, nueva)}
+          />
+          <span className="ml-2 text-sm text-gray-700 align-middle">
+            {estadoCatalogo?.puntuacion || 0} / 5
+          </span>
         </section>
         {mensaje && <MensajeFlotante texto={mensaje} />}
 

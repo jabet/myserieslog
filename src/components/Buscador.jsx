@@ -1,4 +1,3 @@
-// src/components/Buscador.jsx
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../utils/supabaseClient";
@@ -23,7 +22,6 @@ export default function Buscador() {
           .eq("user_id", user.id)
           .single();
         if (pref?.idioma_preferido) {
-          // usar formato "es-ES" para TMDb
           setIdiomaPreferido(
             pref.idioma_preferido.length === 2
               ? `${pref.idioma_preferido}-${pref.idioma_preferido.toUpperCase()}`
@@ -61,6 +59,7 @@ export default function Buscador() {
       .from("contenido")
       .select("id")
       .eq("id", item.id)
+      .eq("media_type", item.media_type) // Buscar por media_type también
       .maybeSingle();
 
     if (!existente) {
@@ -84,11 +83,12 @@ export default function Buscador() {
         mediaType
       );
 
-      // 3.3) Upsert en contenido
+      // 3.3) Upsert en contenido (guardar media_type)
       const { error: err1 } = await supabase.from("contenido").upsert([
         {
           id: tmdb.id,
           tipo,
+          media_type: mediaType, // Guardar media_type ("movie" o "tv")
           anio:
             (mediaType === "tv"
               ? tmdb.first_air_date
@@ -125,8 +125,9 @@ export default function Buscador() {
       }
     }
 
-    // 3.5) Navegar a detalle
-    navigate(`/detalle/${item.id}`);
+    // 3.5) Navegar a detalle usando media_type
+    navigate(`/detalle/${item.media_type}/${item.id}`);
+    console.log("---> media_type: ", item.media_type);
   };
 
   return (

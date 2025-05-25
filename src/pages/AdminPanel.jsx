@@ -1,7 +1,8 @@
-// src/pages/AdminPanel.jsx
 import { useEffect, useState } from "react";
 import { supabase } from "../utils/supabaseClient";
 import { actualizarContenido } from "../utils/actualizarContenido";
+import { actualizarTraducciones } from "../utils/actualizarTraducciones";
+import { cargarTemporadasCapitulos } from "../utils/cargarTemporadasCapitulos";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
@@ -11,6 +12,8 @@ export default function AdminPanel() {
   const [contenidos, setContenidos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [mensaje, setMensaje] = useState("");
+  const [sortBy, setSortBy] = useState("id");
+  const [sortDir, setSortDir] = useState("asc");
 
   // 1) Cargar sesión y perfil (incluye role)
   useEffect(() => {
@@ -33,8 +36,10 @@ export default function AdminPanel() {
     setLoading(true);
     supabase
       .from("contenido")
-      .select("id, nombre, tipo, anio, finalizada, ultima_actualizacion")
-      .order("id", { ascending: true })
+      .select(
+        "id, nombre, tipo, media_type, anio, finalizada, ultima_actualizacion"
+      )
+      .order(sortBy, { ascending: sortDir === "asc" })
       .then(({ data, error }) => {
         if (error) {
           console.error("Error al cargar contenidos:", error);
@@ -43,7 +48,7 @@ export default function AdminPanel() {
         }
         setLoading(false);
       });
-  }, [user, perfil.role]);
+  }, [user, perfil.role, sortBy, sortDir]);
 
   // Formatea fecha en DD/MM/AAAA HH:MM
   const formatearFecha = (iso) =>
@@ -59,9 +64,10 @@ export default function AdminPanel() {
     setTimeout(() => setMensaje(""), 3000);
   };
 
-  // 3) Forzar actualización de un contenido
-  const handleActualizar = async (id) => {
-    const ok = await actualizarContenido(id);
+  // Forzar actualización de un contenido
+  const handleActualizar = async (id, media_type) => {
+    const ok = await actualizarContenido(id, media_type);
+    console.log("---> media_type: ", media_type);
     if (ok) {
       mostrarMensaje(`Contenido ${id} actualizado con éxito`);
       // refrescar la fecha
@@ -84,7 +90,28 @@ export default function AdminPanel() {
     }
   };
 
-  // 4) Borrar contenido de la BD
+  // Forzar actualización de traducciones
+  const handleActualizarTraducciones = async (id, tipo) => {
+    const ok = await actualizarTraducciones(id, tipo);
+    if (ok) {
+      mostrarMensaje(`Traducciones de ${id} actualizadas con éxito`);
+    } else {
+      mostrarMensaje(`Fallo al actualizar traducciones de ${id}`);
+    }
+  };
+
+  // Forzar carga de temporadas y capítulos (solo para series)
+  const handleCargarTemporadas = async (id, tipo) => {
+    if (tipo !== "serie") return;
+    const ok = await cargarTemporadasCapitulos(id, "es-ES");
+    if (ok) {
+      mostrarMensaje(`Temporadas y capítulos de ${id} cargados con éxito`);
+    } else {
+      mostrarMensaje(`Fallo al cargar temporadas/capítulos de ${id}`);
+    }
+  };
+
+  // Borrar contenido de la BD
   const handleEliminar = async (id) => {
     if (!confirm(`¿Seguro que quieres borrar el contenido ${id}?`)) return;
     const { error } = await supabase.from("contenido").delete().eq("id", id);
@@ -96,6 +123,20 @@ export default function AdminPanel() {
       mostrarMensaje(`Contenido ${id} borrado`);
     }
   };
+
+  // Cambia el orden de la tabla
+  const handleSort = (campo) => {
+    if (sortBy === campo) {
+      setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(campo);
+      setSortDir("asc");
+    }
+  };
+
+  // Icono de orden
+  const sortIcon = (campo) =>
+    sortBy === campo ? (sortDir === "asc" ? " ▲" : " ▼") : "";
 
   if (!user) return null;
   if (perfil.role !== "admin")
@@ -123,16 +164,48 @@ export default function AdminPanel() {
 
         {loading ? (
           <p>Cargando contenidos…</p>
+        ) : contenidos.length === 0 ? (
+          <p>No hay contenidos en la base de datos.</p>
         ) : (
           <table className="w-full table-auto border-collapse">
             <thead>
               <tr className="bg-gray-100">
-                <th className="border px-2 py-1">ID</th>
-                <th className="border px-2 py-1">Nombre</th>
-                <th className="border px-2 py-1">Tipo</th>
-                <th className="border px-2 py-1">Año</th>
-                <th className="border px-2 py-1">Finalizada</th>
-                <th className="border px-2 py-1">Última Actualización</th>
+                <th
+                  className="border px-2 py-1 cursor-pointer"
+                  onClick={() => handleSort("id")}
+                >
+                  ID{sortIcon("id")}
+                </th>
+                <th
+                  className="border px-2 py-1 cursor-pointer"
+                  onClick={() => handleSort("nombre")}
+                >
+                  Nombre{sortIcon("nombre")}
+                </th>
+                <th
+                  className="border px-2 py-1 cursor-pointer"
+                  onClick={() => handleSort("tipo")}
+                >
+                  Tipo{sortIcon("tipo")}
+                </th>
+                <th
+                  className="border px-2 py-1 cursor-pointer"
+                  onClick={() => handleSort("anio")}
+                >
+                  Año{sortIcon("anio")}
+                </th>
+                <th
+                  className="border px-2 py-1 cursor-pointer"
+                  onClick={() => handleSort("finalizada")}
+                >
+                  Finalizada{sortIcon("finalizada")}
+                </th>
+                <th
+                  className="border px-2 py-1 cursor-pointer"
+                  onClick={() => handleSort("ultima_actualizacion")}
+                >
+                  Última Actualización{sortIcon("ultima_actualizacion")}
+                </th>
                 <th className="border px-2 py-1">Acciones</th>
               </tr>
             </thead>
@@ -151,11 +224,25 @@ export default function AdminPanel() {
                   </td>
                   <td className="border px-2 py-1 space-x-2">
                     <button
-                      onClick={() => handleActualizar(c.id)}
+                      onClick={() => handleActualizar(c.id, c.media_type)}
                       className="text-sm bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700"
                     >
-                      Forzar actualización
+                      Actualizar contenido
                     </button>
+                    <button
+                      onClick={() => handleActualizarTraducciones(c.id, c.tipo)}
+                      className="text-sm bg-purple-600 text-white px-2 py-1 rounded hover:bg-purple-700"
+                    >
+                      Actualizar traducciones
+                    </button>
+                    {c.tipo === "serie" && (
+                      <button
+                        onClick={() => handleCargarTemporadas(c.id, c.tipo)}
+                        className="text-sm bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700"
+                      >
+                        Cargar temporadas/capítulos
+                      </button>
+                    )}
                     <button
                       onClick={() => handleEliminar(c.id)}
                       className="text-sm bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700"

@@ -19,7 +19,7 @@ export default function App() {
     aplicarFiltros,
     loading,
   } = useCatalogoUsuario(usuario, idioma);
-const { proximos, loading: loadingProximos } = useProximasEmisiones(usuario);
+  const { proximos, loading: loadingProximos } = useProximasEmisiones(usuario);
   return (
     <div className="min-h-screen flex flex-col grid-rows-[auto_1fr_auto]">
       <Navbar />
@@ -34,7 +34,7 @@ const { proximos, loading: loadingProximos } = useProximasEmisiones(usuario);
               onFiltrar={aplicarFiltros}
             />
             {loading ? (
-              <div className="grid grid-cols-2 md:grid-cols-7 gap-4 justify-items-center">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 justify-items-center">
                 {[...Array(6)].map((_, i) => (
                   <Card key={i} className="p-4">
                     <div className="w-full h-52 bg-gray-200 rounded animate-pulse mb-2" />

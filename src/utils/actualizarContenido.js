@@ -1,92 +1,56 @@
 import { supabase } from "./supabaseClient";
-import { detectarTipo } from "./tmdbTypeDetector";
 
- const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY;
- const TMDB_BASE = "https://api.themoviedb.org/3";
+const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY;
+const TMDB_BASE = "https://api.themoviedb.org/3";
 
- export async function actualizarContenido(idContenido, idioma = "es-ES") {
-   try {
-     // 0) Leemos el tipo original (no estrictamente necesario)
-     const { data: contenidoDB } = await supabase
-       .from("contenido")
-       .select("tipo")
-       .eq("id", idContenido)
-       .single();
-
-
-    // 1) Traemos de TMDb sin asumir serie o peli
-     const urls = {
-       tv:    `${TMDB_BASE}/tv/${idContenido}`,
-       movie: `${TMDB_BASE}/movie/${idContenido}`,
-     };
-
-    // intentamos siempre primero TV, luego Movie si no existe
-    let tmdbRes = await fetch(
-      `${urls.tv}?api_key=${TMDB_API_KEY}&language=${idioma}`
-    );
-    let tmdbData = await tmdbRes.json();
-    let mediaType = "tv";
-
-    if (tmdbData.success === false) {
-      tmdbRes = await fetch(
-        `${urls.movie}?api_key=${TMDB_API_KEY}&language=${idioma}`
-      );
-      tmdbData = await tmdbRes.json();
-      mediaType = "movie";
+/**
+ * Actualiza los datos principales de una serie o película en Supabase usando TMDb.
+ * @param {number|string} id - ID de TMDb
+ * @param {"movie"|"tv"} media_type - Tipo TMDb ("movie" o "tv")
+ * @param {string} idioma - Idioma (opcional, por defecto "es-ES")
+ * @returns {Promise<boolean>}
+ */
+export async function actualizarContenido(id, media_type, idioma = "es-ES") {
+  try {
+    let url;
+    if (media_type === "tv") {
+      url = `${TMDB_BASE}/tv/${id}?api_key=${TMDB_API_KEY}&language=${idioma}`;
+    } else if (media_type === "movie") {
+      url = `${TMDB_BASE}/movie/${id}?api_key=${TMDB_API_KEY}&language=${idioma}`;
+    } else {
+      throw new Error("media_type no soportado");
     }
 
-    const tipo = detectarTipo(tmdbData, mediaType);
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.success === false) return false;
 
-     // 2) Preparamos campos
+    // Prepara los campos que quieres actualizar en tu tabla "contenido"
+    const update = {
+      nombre: data.name || data.title || "",
+      imagen: data.poster_path
+        ? `https://image.tmdb.org/t/p/w500${data.poster_path}`
+        : null,
+      anio: (data.first_air_date || data.release_date || "").slice(0, 4),
+      finalizada: media_type === "tv" ? data.status === "Ended" : true,
+      ultima_actualizacion: new Date().toISOString(),
+      media_type, // <-- Guarda el media_type ("movie" o "tv")
+      // ...otros campos que quieras actualizar
+    };
 
-    const nombre = tmdbData.name || tmdbData.title;
-     const sinopsis = tmdbData.overview;
-     const anio = (
-       tmdbData.first_air_date ||
-       tmdbData.release_date ||
-       ""
-     ).slice(0, 4);
-     const imagen = tmdbData.poster_path
-       ? `https://image.tmdb.org/t/p/w500${tmdbData.poster_path}`
-       : null;
+    const { error } = await supabase
+      .from("contenido")
+      .update(update)
+      .eq("id", id)
+      .eq("media_type", media_type); // <-- Asegura que actualizas el correcto
 
-    const finalizada =
-      mediaType === "tv" ? tmdbData.status === "Ended" : true;
-     const ahora = new Date().toISOString();
-
-     // 3) Actualizamos metadata en contenido
-     const { error: err1 } = await supabase
-       .from("contenido")
-       .update({
-        tipo,               // guardamos el nuevo tipo detectado
-         nombre,
-         anio,
-         imagen,
-         finalizada,
-         ultima_actualizacion: ahora,
-       })
-       .eq("id", idContenido);
-     if (err1) throw err1;
-
-     // 4) Traducción
-     const { error: err2 } = await supabase
-       .from("contenido_traducciones")
-       .upsert(
-         [
-           {
-             contenido_id: idContenido,
-             idioma,
-             nombre,
-             sinopsis,
-           },
-         ],
-         { onConflict: "contenido_id,idioma" }
-       );
-     if (err2) throw err2;
-
-     return true;
-   } catch (err) {
-     console.error("Error actualizando contenido:", err);
-     return false;
-   }
- }
+    if (error) {
+      console.error("Error actualizando contenido:", error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("Error en actualizarContenido:", err);
+    return false;
+  }
+}

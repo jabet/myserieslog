@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import App from "./pages/App.jsx";
 import "./index.css";
 import "@radix-ui/themes/styles.css";
+import { Theme } from "@radix-ui/themes";
 import { BrowserRouter, Routes, Route, HashRouter } from "react-router-dom";
 import Detalle from "./pages/Detalle.jsx";
 import Login from "./pages/Login.jsx";
@@ -16,17 +17,19 @@ import React from "react";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <HashRouter>
-      <Routes>
-        <Route path="/" element={<App />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/detalle/:id" element={<Detalle />} />
-        <Route path="/preferencias" element={<PreferenciasUsuario />} />
-        <Route path="/perfil/:nick" element={<PerfilAmigo />} />
-        <Route path="/admin" element={<AdminPanel />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/social" element={<RedSocial />} />
-      </Routes>
-    </HashRouter>
+    <Theme appearance="light" accentColor="blue">
+      <HashRouter>
+        <Routes>
+          <Route path="/" element={<App />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/detalle/:tipo/:id" element={<Detalle />} />
+          <Route path="/preferencias" element={<PreferenciasUsuario />} />
+          <Route path="/perfil/:nick" element={<PerfilAmigo />} />
+          <Route path="/admin" element={<AdminPanel />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/social" element={<RedSocial />} />
+        </Routes>
+      </HashRouter>
+     </Theme>
   </StrictMode>
 );

@@ -7,6 +7,7 @@ export default function MediaCard({
   imagen,
   anio,
   tipo,
+  media_type,
   favorito,
   viendo,
   onEliminar,

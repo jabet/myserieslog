@@ -26,7 +26,7 @@ export default function useProximasEmisiones(usuario) {
         .eq("user_id", usuario.id)
         .in("estado", ["viendo", "pendiente", "vista"]);
 
-      console.log("Catalogo:", catalogo);
+      //console.log("Catalogo:", catalogo);
 
       if (errorCatalogo) {
         console.error("Error cargando catálogo del usuario:", errorCatalogo);
@@ -35,7 +35,7 @@ export default function useProximasEmisiones(usuario) {
       }
 
       const idsContenido = catalogo.map((c) => c.contenido_id);
-      console.log("IDs de contenido:", idsContenido);
+      //console.log("IDs de contenido:", idsContenido);
 
       if (idsContenido.length === 0) {
         setProximos([]);
@@ -54,7 +54,7 @@ export default function useProximasEmisiones(usuario) {
         .lte("fecha_emision", maxDateStr)
         .order("fecha_emision", { ascending: true });
 
-      console.log("Episodios próximos:", episodios);
+     // console.log("Episodios próximos:", episodios);
 
       if (errorEpisodios) {
         console.error("Error cargando episodios:", errorEpisodios);
@@ -68,17 +68,17 @@ export default function useProximasEmisiones(usuario) {
         .select("episodio_id")
         .eq("user_id", usuario.id);
 
-      console.log("Episodios vistos:", vistos);
+      //console.log("Episodios vistos:", vistos);
 
       const idsVistos = vistos?.map((v) => v.episodio_id) || [];
 
       // 4. Filtrar episodios pendientes (no vistos)
       const pendientes = episodios.filter((e) => !idsVistos.includes(e.id));
-      console.log("Pendientes:", pendientes);
+      //console.log("Pendientes:", pendientes);
 
       // 5. Obtener nombres de los contenidos
       const ids = [...new Set(pendientes.map((e) => e.contenido_id))];
-      console.log("IDs de contenidos pendientes:", ids);
+      //console.log("IDs de contenidos pendientes:", ids);
 
       let mapaNombres = {};
       if (ids.length > 0) {
@@ -87,7 +87,7 @@ export default function useProximasEmisiones(usuario) {
           .select("id, contenido_traducciones(nombre, idioma)")
           .in("id", ids);
 
-        console.log("Contenidos:", contenidos);
+       // console.log("Contenidos:", contenidos);
 
         if (contenidos) {
           for (const c of contenidos) {
@@ -105,7 +105,7 @@ export default function useProximasEmisiones(usuario) {
         contenido_nombre: mapaNombres[ep.contenido_id] || "Sin título",
       }));
 
-      console.log("Resultado final:", resultado);
+      //console.log("Resultado final:", resultado);
 
       setProximos(resultado);
       setLoading(false);
