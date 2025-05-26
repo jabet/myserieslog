@@ -121,7 +121,7 @@ export default function Detalle() {
         .from("contenido")
         .select("id")
         .eq("id", item.id)
-        .eq("media_tpe", tipo)
+        .eq("media_type", tipo)
         .maybeSingle();
 
       if (!existente) {
@@ -336,7 +336,7 @@ export default function Detalle() {
           <section className="mt-8">
             <EpisodiosPorTemporada
               contenidoId={item.id}
-              vistos={vistos}
+              vistos={vistos.map((v) => v.episodio_id)}
               toggle={toggleVisto}
               idioma={idioma}
               usuario={usuario}

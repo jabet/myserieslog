@@ -5,6 +5,7 @@ import { actualizarTraducciones } from "../utils/actualizarTraducciones";
 import { cargarTemporadasCapitulos } from "../utils/cargarTemporadasCapitulos";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import MensajeFlotante from "../components/MensajeFlotante";
 
 export default function AdminPanel() {
   const [user, setUser] = useState(null);
@@ -66,8 +67,8 @@ export default function AdminPanel() {
 
   // Forzar actualización de un contenido
   const handleActualizar = async (id, media_type) => {
+    console.log("Actualizando contenido:", id, media_type);
     const ok = await actualizarContenido(id, media_type);
-    console.log("---> media_type: ", media_type);
     if (ok) {
       mostrarMensaje(`Contenido ${id} actualizado con éxito`);
       // refrescar la fecha
@@ -91,8 +92,9 @@ export default function AdminPanel() {
   };
 
   // Forzar actualización de traducciones
-  const handleActualizarTraducciones = async (id, tipo) => {
-    const ok = await actualizarTraducciones(id, tipo);
+  const handleActualizarTraducciones = async (id, media_type) => {
+    console.log("Actualizando traducciones:", id, media_type);
+    const ok = await actualizarTraducciones(id, media_type);
     if (ok) {
       mostrarMensaje(`Traducciones de ${id} actualizadas con éxito`);
     } else {
@@ -101,8 +103,9 @@ export default function AdminPanel() {
   };
 
   // Forzar carga de temporadas y capítulos (solo para series)
-  const handleCargarTemporadas = async (id, tipo) => {
-    if (tipo !== "serie") return;
+  const handleCargarTemporadas = async (id, media_type) => {
+    console.log("Cargar temporadas/capítulos:", id, media_type);
+    if (media_type !== "tv") return;
     const ok = await cargarTemporadasCapitulos(id, "es-ES");
     if (ok) {
       mostrarMensaje(`Temporadas y capítulos de ${id} cargados con éxito`);
@@ -111,8 +114,28 @@ export default function AdminPanel() {
     }
   };
 
+  // Forzar actualización de TODAS las temporadas y capítulos (solo para series)
+  const handleForzarActualizarTemporadas = async (id, media_type) => {
+    console.log(
+      "Forzar actualización de todas las temporadas:",
+      id,
+      media_type
+    );
+    if (media_type !== "tv") return;
+    mostrarMensaje("Forzando actualización de todas las temporadas...");
+    const ok = await cargarTemporadasCapitulos(id, "es-ES");
+    if (ok) {
+      mostrarMensaje(
+        `Temporadas y capítulos de ${id} actualizados en Supabase`
+      );
+    } else {
+      mostrarMensaje(`Fallo al actualizar temporadas/capítulos de ${id}`);
+    }
+  };
+
   // Borrar contenido de la BD
   const handleEliminar = async (id) => {
+    console.log("Eliminando contenido:", id);
     if (!confirm(`¿Seguro que quieres borrar el contenido ${id}?`)) return;
     const { error } = await supabase.from("contenido").delete().eq("id", id);
     if (error) {
@@ -144,7 +167,7 @@ export default function AdminPanel() {
       <>
         <Navbar />
         <main className="pt-20 px-4 text-center">
-          <p className="text-red-600">Acceso denegado: solo admins.</p>
+          <MensajeFlotante texto="Acceso denegado: solo admins." />
         </main>
         <Footer />
       </>
@@ -153,14 +176,9 @@ export default function AdminPanel() {
   return (
     <>
       <Navbar />
+      <MensajeFlotante texto={mensaje} />
       <main className="pt-20 px-4 max-w-4xl mx-auto">
         <h1 className="text-2xl font-bold mb-4">Panel de Administración</h1>
-
-        {mensaje && (
-          <div className="mb-4 text-sm bg-green-100 border border-green-300 text-green-800 px-4 py-2 rounded">
-            {mensaje}
-          </div>
-        )}
 
         {loading ? (
           <p>Cargando contenidos…</p>
@@ -214,7 +232,7 @@ export default function AdminPanel() {
                 <tr key={c.id}>
                   <td className="border px-2 py-1">{c.id}</td>
                   <td className="border px-2 py-1">{c.nombre}</td>
-                  <td className="border px-2 py-1">{c.tipo}</td>
+                  <td className="border px-2 py-1">{c.media_type}</td>
                   <td className="border px-2 py-1">{c.anio}</td>
                   <td className="border px-2 py-1">
                     {c.finalizada ? "Sí" : "No"}
@@ -230,18 +248,32 @@ export default function AdminPanel() {
                       Actualizar contenido
                     </button>
                     <button
-                      onClick={() => handleActualizarTraducciones(c.id, c.tipo)}
+                      onClick={() =>
+                        handleActualizarTraducciones(c.id, c.media_type)
+                      }
                       className="text-sm bg-purple-600 text-white px-2 py-1 rounded hover:bg-purple-700"
                     >
                       Actualizar traducciones
                     </button>
-                    {c.tipo === "serie" && (
-                      <button
-                        onClick={() => handleCargarTemporadas(c.id, c.tipo)}
-                        className="text-sm bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700"
-                      >
-                        Cargar temporadas/capítulos
-                      </button>
+                    {c.media_type === "tv" && (
+                      <>
+                        <button
+                          onClick={() =>
+                            handleCargarTemporadas(c.id, c.media_type)
+                          }
+                          className="text-sm bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700"
+                        >
+                          Cargar temporadas/capítulos
+                        </button>
+                        <button
+                          onClick={() =>
+                            handleForzarActualizarTemporadas(c.id, c.media_type)
+                          }
+                          className="text-sm bg-orange-600 text-white px-2 py-1 rounded hover:bg-orange-700"
+                        >
+                          Forzar actualización temporadas
+                        </button>
+                      </>
                     )}
                     <button
                       onClick={() => handleEliminar(c.id)}

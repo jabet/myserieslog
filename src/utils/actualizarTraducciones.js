@@ -18,12 +18,20 @@ export async function actualizarTraducciones(contenidoId) {
     if (!data.translations) return false;
 
     // 2. Preparar datos para Supabase
-    const traducciones = data.translations.map((t) => ({
+    const traduccionesRaw = data.translations.map((t) => ({
       contenido_id: contenidoId,
       idioma: t.iso_639_1,
       nombre: t.data?.name || "",
-      descripcion: t.data?.overview || "",
+      sinopsis: t.data?.overview || "",
     }));
+
+    // Elimina duplicados por idioma (deja solo la primera aparición)
+    const traducciones = Object.values(
+      traduccionesRaw.reduce((acc, curr) => {
+        if (!acc[curr.idioma]) acc[curr.idioma] = curr;
+        return acc;
+      }, {})
+    );
 
     // 3. Upsert en Supabase
     if (traducciones.length > 0) {
