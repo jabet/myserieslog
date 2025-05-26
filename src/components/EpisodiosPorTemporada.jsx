@@ -188,6 +188,7 @@ export default function EpisodiosPorTemporada({
                       <button
                         onClick={async () => {
                           if (!enCatalogo) {
+                            console.log("Esta en el catalogo:", enCatalogo);
                             mostrar(
                               "Debes añadir a tu catalogo antes de marcarlos episodios como vistos"
                             );

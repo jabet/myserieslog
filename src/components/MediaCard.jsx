@@ -36,7 +36,7 @@ export default function MediaCard({
   }
 
   return (
-    <div className="relative w-full max-w-xs bg-white shadow rounded overflow-hidden hover:shadow-lg transition">
+    <div className="relative w-full min-w-30 max-w-30 bg-white shadow rounded overflow-hidden hover:shadow-lg transition ">
       {viendo && (
         <div className="absolute top-2 right-2 bg-black bg-opacity-60 rounded-full p-1">
           <EyeOpenIcon className="text-white w-3 h-3" />

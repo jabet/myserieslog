@@ -20,6 +20,21 @@ export default function App() {
     loading,
   } = useCatalogoUsuario(usuario, idioma);
   const { proximos, loading: loadingProximos } = useProximasEmisiones(usuario);
+
+  // --- Agrupaciones ---
+  // IDs de series con próximos capítulos
+  const idsProximos = new Set(proximos.map((p) => p.contenido_id));
+  // Series que estoy viendo (estado === "viendo")
+  const viendo = catalogo.filter(
+    (item) => item.estado === "viendo" && !idsProximos.has(item.id)
+  );
+  // Series con próximos capítulos
+  const conProximos = catalogo.filter((item) => idsProximos.has(item.id));
+  // El resto del catálogo (ni viendo ni próximos)
+  const resto = catalogo.filter(
+    (item) => !conProximos.includes(item) && !viendo.includes(item)
+  );
+
   return (
     <div className="min-h-screen flex flex-col grid-rows-[auto_1fr_auto]">
       <Navbar />
@@ -44,7 +59,27 @@ export default function App() {
                 ))}
               </div>
             ) : (
-              <CatalogoGrid catalogo={catalogo} onEliminar={eliminarItem} />
+              <>
+                <section className="mb-8">
+                  <h2 className="text-xl font-bold mb-2">
+                    Nuevos capítulos
+                  </h2>
+                  <CatalogoGrid
+                    catalogo={conProximos}
+                    onEliminar={eliminarItem}
+                  />
+                </section>
+                <section className="mb-8">
+                  <h2 className="text-xl font-bold mb-2">
+                    Continuar viendo
+                  </h2>
+                  <CatalogoGrid catalogo={viendo} onEliminar={eliminarItem} />
+                </section>
+                <section className="sm:flex-nowrap sm:sm:overflow-x-visible sm:min-w-320">
+                  <h2 className="text-xl font-bold mb-2">Mi catálogo</h2>
+                  <CatalogoGrid catalogo={resto} onEliminar={eliminarItem} />
+                </section>
+              </>
             )}
           </div>
           {/* Columna lateral: próximas emisiones */}

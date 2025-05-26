@@ -84,16 +84,41 @@ export default function Detalle() {
 
   // 3) Carga episodios vistos
   useEffect(() => {
+    if (!item) {
+      setVistos([]);
+      return;
+    }
+    if (item.desdeTMDB) {
+      // Si el item viene de TMDb, carga episodios desde la API (usa tu hook o lógica)
+      // Ejemplo:
+      setVistos([]); // No hay vistos aún
+      // Aquí podrías setear episodios/temporadas en un estado si lo necesitas
+      return;
+    }
     if (!usuario) {
       setVistos([]);
       return;
     }
+    // 1. Obtén todos los episodios de la serie actual
     supabase
-      .from("episodios_vistos")
-      .select("episodio_id")
-      .eq("user_id", usuario.id)
-      .then(({ data }) => setVistos(data || []));
-  }, [usuario]);
+      .from("episodios")
+      .select("id")
+      .eq("contenido_id", item.id)
+      .then(async ({ data: episodios }) => {
+        if (!episodios) {
+          setVistos([]);
+          return;
+        }
+        const episodiosIds = episodios.map((e) => e.id);
+        // 2. Obtén los episodios vistos del usuario que estén en esta serie
+        const { data: vistosData } = await supabase
+          .from("episodios_vistos")
+          .select("episodio_id")
+          .eq("user_id", usuario.id)
+          .in("episodio_id", episodiosIds);
+        setVistos(vistosData || []);
+      });
+  }, [usuario, item]);
 
   const mostrar = (txt) => {
     setMensaje(txt);
@@ -135,7 +160,6 @@ export default function Detalle() {
             sinopsis: item.sinopsis,
             anio: item.anio,
             finalizada: item.finalizada,
-            // ...otros campos relevantes
           },
         ]);
       }
@@ -157,6 +181,15 @@ export default function Detalle() {
         puntuacion: 0,
       });
       setFavorito(false);
+
+      // --- NUEVO: Recarga el item desde Supabase para refrescar episodios ---
+      const { data: nuevoItem } = await supabase
+        .from("contenido")
+        .select("*")
+        .eq("id", item.id)
+        .eq("media_type", tipo)
+        .single();
+      if (nuevoItem) setItem(nuevoItem);
     }
   };
 
@@ -204,6 +237,10 @@ export default function Detalle() {
       mostrar("Inicia sesión para marcar episodios");
       return;
     }
+    if (!enCatalogo) {
+      mostrar("Añade primero la serie a tu catálogo para marcar episodios");
+      return;
+    }
     const ya = vistos.some((v) => v.episodio_id === episodioId);
     if (ya) {
       await supabase
@@ -212,15 +249,64 @@ export default function Detalle() {
         .eq("user_id", usuario.id)
         .eq("episodio_id", episodioId);
     } else {
-      await supabase
-        .from("episodios_vistos")
-        .insert([{ user_id: usuario.id, episodio_id: episodioId }]);
+      await supabase.from("episodios_vistos").insert([
+        {
+          user_id: usuario.id,
+          episodio_id: episodioId,
+        },
+      ]);
     }
-    const { data } = await supabase
+    // Recarga episodios vistos SOLO para los episodios de esta serie
+    const { data: episodios } = await supabase
+      .from("episodios")
+      .select("id")
+      .eq("contenido_id", item.id);
+    const episodiosIds = episodios.map((e) => e.id);
+    const { data: vistosData } = await supabase
       .from("episodios_vistos")
       .select("episodio_id")
-      .eq("user_id", usuario.id);
-    setVistos(data || []);
+      .eq("user_id", usuario.id)
+      .in("episodio_id", episodiosIds);
+    setVistos(vistosData || []);
+
+    // --- OPTIMIZADO: Cuenta episodios y vistos directamente ---
+    // 1. Cuenta total de episodios (omite especiales: temporada 0)
+    const { count: totalEpisodios } = await supabase
+      .from("episodios")
+      .select("id", { count: "exact", head: true })
+      .eq("contenido_id", item.id)
+      .neq("temporada", 0);
+
+    // 2. Cuenta episodios vistos por el usuario (solo de esta serie y omitiendo especiales)
+    const { data: episodiosValidos } = await supabase
+      .from("episodios")
+      .select("id")
+      .eq("contenido_id", item.id)
+      .neq("temporada", 0);
+    const episodiosValidosIds = episodiosValidos.map((e) => e.id);
+
+    const { count: vistosCount } = await supabase
+      .from("episodios_vistos")
+      .select("episodio_id", { count: "exact", head: true })
+      .eq("user_id", usuario.id)
+      .in("episodio_id", episodiosValidosIds);
+
+    // 3. Actualiza el estado según los contadores
+    if (totalEpisodios > 0 && vistosCount === totalEpisodios) {
+      await supabase
+        .from("catalogo_usuario")
+        .update({ estado: "vista" })
+        .eq("user_id", usuario.id)
+        .eq("contenido_id", item.id);
+      setEstadoCatalogo((prev) => ({ ...prev, estado: "vista" }));
+    } else {
+      await supabase
+        .from("catalogo_usuario")
+        .update({ estado: "viendo" })
+        .eq("user_id", usuario.id)
+        .eq("contenido_id", item.id);
+      setEstadoCatalogo((prev) => ({ ...prev, estado: "viendo" }));
+    }
   };
 
   // 8) Guardar puntuación
@@ -336,10 +422,12 @@ export default function Detalle() {
           <section className="mt-8">
             <EpisodiosPorTemporada
               contenidoId={item.id}
+              temporadas={item.temporadas} 
               vistos={vistos.map((v) => v.episodio_id)}
               toggle={toggleVisto}
               idioma={idioma}
               usuario={usuario}
+              enCatalogo={enCatalogo}
             />
           </section>
         )}

@@ -53,7 +53,7 @@ export default function FiltrosCatalogo({
   }, [filtroTipo, filtroAnio, filtroEstado, filtroTexto]);
 
   return (
-    <div className="mb-6 flex flex-col md:flex-row gap-4 text-md">
+    <div className="mb-6 flex flex-col md:flex-row gap-4 text-md items-center">
       <RadixSelect
         value={filtroTipo}
         onValueChange={setFiltroTipo}
@@ -88,6 +88,18 @@ export default function FiltrosCatalogo({
         value={filtroTexto}
         onChange={(e) => setFiltroTexto(e.target.value)}
       />
+      <button
+        type="button"
+        className="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300 text-sm ml-2"
+        onClick={() => {
+          setFiltroTipo("");
+          setFiltroAnio("");
+          setFiltroEstado("");
+          setFiltroTexto("");
+        }}
+      >
+        Limpiar filtros
+      </button>
     </div>
   );
 }

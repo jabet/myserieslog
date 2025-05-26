@@ -106,13 +106,14 @@ export default function Buscador() {
       }
 
       // 3.4) Upsert en traducciones
+      const idiomaCorto = idiomaPreferido.slice(0, 2);
       const { error: err2 } = await supabase
         .from("contenido_traducciones")
         .upsert(
           [
             {
               contenido_id: tmdb.id,
-              idioma: idiomaPreferido,
+              idioma: idiomaCorto,
               nombre: tmdb.name || tmdb.title,
               sinopsis: tmdb.overview,
             },
@@ -127,7 +128,7 @@ export default function Buscador() {
 
     // 3.5) Navegar a detalle usando media_type
     navigate(`/detalle/${item.media_type}/${item.id}`);
-    console.log("---> media_type: ", item.media_type);
+    
   };
 
   return (
