@@ -8,6 +8,8 @@ export default function EpisodiosPorTemporada({
   vistos,
   toggle,
   idioma,
+  usuario,
+  enCatalogo,
 }) {
   const [temporadasAbiertas, setTemporadasAbiertas] = useState({});
   const [episodiosPorTemporada, setEpisodiosPorTemporada] = useState({});
@@ -55,7 +57,7 @@ export default function EpisodiosPorTemporada({
       setTemporadasDisponibles(todas);
 
       // Log de las temporadas totales
-      console.log("Temporadas totales:", todas.length, "Temporadas:", todas);
+      // console.log("Temporadas totales:", todas.length, "Temporadas:", todas);
     };
 
     cargarEpisodios();
@@ -79,6 +81,16 @@ export default function EpisodiosPorTemporada({
     const todosVistos = total > 0 && vistosCount === total;
 
     const toggleTodos = async () => {
+      if (!usuario) {
+        mostrar("Debes iniciar sesión para marcar episodios como vistos");
+        return;
+      }
+      if (!enCatalogo) {
+        mostrar(
+          "Debes añadir a tu catálogo antes de marcarlos episodios como vistos"
+        );
+        return;
+      }
       if (todosVistos) {
         for (const ep of lista) {
           if (vistos.includes(ep.id)) {
@@ -125,16 +137,18 @@ export default function EpisodiosPorTemporada({
         {abierta && (
           <div className="px-4 py-2">
             <div className="mb-2 flex justify-end">
-              <button
-                onClick={toggleTodos}
-                className={`text-xs px-3 py-1 rounded ${
-                  todosVistos
-                    ? "bg-red-500 text-white hover:bg-red-600"
-                    : "bg-green-500 text-white hover:bg-green-600"
-                }`}
-              >
-                {todosVistos ? "Desmarcar todos" : "Marcar todos como vistos"}
-              </button>
+              {usuario && (
+                <button
+                  onClick={toggleTodos}
+                  className={`text-xs px-3 py-1 rounded ${
+                    todosVistos
+                      ? "bg-red-500 text-white hover:bg-red-600"
+                      : "bg-green-500 text-white hover:bg-green-600"
+                  }`}
+                >
+                  {todosVistos ? "Desmarcar todos" : "Marcar todos como vistos"}
+                </button>
+              )}
             </div>
             <div className="py-2 flex items-center justify-between">
               <ProgresoTemporada total={total} vistos={vistosCount} />
@@ -170,23 +184,31 @@ export default function EpisodiosPorTemporada({
                         </p>
                       )}
                     </div>
-                    <button
-                      onClick={async () => {
-                        await toggle(ep.id);
-                        mostrar(
+                    {usuario ? (
+                      <button
+                        onClick={async () => {
+                          if (!enCatalogo) {
+                            mostrar(
+                              "Debes añadir a tu catalogo antes de marcarlos episodios como vistos"
+                            );
+                            return;
+                          }
+                          await toggle(ep.id);
+                          mostrar(
+                            ya
+                              ? `Episodio ${ep.episodio} desmarcado`
+                              : `Episodio ${ep.episodio} marcado como visto`
+                          );
+                        }}
+                        className={`text-sm px-3 py-1 rounded ${
                           ya
-                            ? `Episodio ${ep.episodio} desmarcado`
-                            : `Episodio ${ep.episodio} marcado como visto`
-                        );
-                      }}
-                      className={`text-sm px-3 py-1 rounded ${
-                        ya
-                          ? "bg-green-500 text-white"
-                          : "bg-gray-200 text-gray-800"
-                      }`}
-                    >
-                      {ya ? "Visto" : "Marcar"}
-                    </button>
+                            ? "bg-green-500 text-white"
+                            : "bg-gray-200 text-gray-800"
+                        }`}
+                      >
+                        {ya ? "Visto" : "Marcar"}
+                      </button>
+                    ) : null}
                   </div>
                 );
               })}
