@@ -2,16 +2,19 @@
 import MediaCard from "./MediaCard";
 import React from "react";
 
-export default function CatalogoGrid({ catalogo, onEliminar }) {
+export default function CatalogoGrid({ catalogo, }) {
   if (!Array.isArray(catalogo)) return null;
 
   return (
     <div
-      className="flex flex-nowrap overflow-x-auto gap-4 items-start
-        sm:grid sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-5 sm:overflow-x-visible
-        sm:max-w-7xl m-auto
-        scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 "
-      style={{ WebkitOverflowScrolling: "touch" }}
+      className="
+        flex flex-nowrap overflow-x-auto gap-4 items-start
+        scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 m-auto
+
+        sm:overflow-x-auto sm:flex-nowrap
+
+        lg:grid-cols-5
+        "
     >
       {catalogo.map((item) => (
         <MediaCard
@@ -23,7 +26,7 @@ export default function CatalogoGrid({ catalogo, onEliminar }) {
           media_type={item.media_type}
           favorito={item.favorito}
           viendo={item.estado === "viendo"}
-          onEliminar={() => item.id_catalogo && onEliminar(item.id_catalogo)}
+          conProximos={item.conProximos}
           onVerDetalle={() =>
             (window.location.href = `/#/detalle/${item.media_type}/${item.id}`)
           }

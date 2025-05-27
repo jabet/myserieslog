@@ -10,7 +10,7 @@ export default function MediaCard({
   media_type,
   favorito,
   viendo,
-  onEliminar,
+  conProximos,
   onVerDetalle,
 }) {
   // Determina el color del badge según el tipo
@@ -36,21 +36,30 @@ export default function MediaCard({
   }
 
   return (
-    <div className="relative w-full min-w-30 max-w-30 bg-white shadow rounded overflow-hidden hover:shadow-lg transition ">
+    <article className="flex flex-wrap w-full min-w-30 max-w-60 bg-white m-1 shadow rounded overflow-hidden hover:shadow-lg transition duration-200 ease-in-out relative">
       {viendo && (
         <div className="absolute top-2 right-2 bg-black bg-opacity-60 rounded-full p-1">
           <EyeOpenIcon className="text-white w-3 h-3" />
         </div>
       )}
+
       <button
         onClick={() => onVerDetalle(media_type)}
-        className="focus:outline-none w-full text-left"
+        className="focus:outline-none w-full text-left "
       >
+        <div className="relative">
         <img
           src={imagen || "/placeholder.jpg"}
           alt={nombre}
           className="w-full max-h-[407px]"
         />
+        {conProximos && (
+          <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-auto bg-red-500 text-white text-xs font-semibold px-2 py-1 text-center">
+            Próximos capítulos
+          </span>
+        )}
+        </div>
+
         <div className="p-3">
           <h2 className="text-sm font-semibold line-clamp-1">{nombre}</h2>
           <p className="text-xs text-gray-600">{anio}</p>
@@ -63,14 +72,6 @@ export default function MediaCard({
           {tipo}
         </span>
       )}
-      {onEliminar && (
-        <button
-          onClick={onEliminar}
-          className="absolute bottom-2 right-2 text-xs text-red-600 hover:underline"
-        >
-          Eliminar
-        </button>
-      )}
-    </div>
+    </article>
   );
 }

@@ -29,7 +29,9 @@ export default function App() {
     (item) => item.estado === "viendo" && !idsProximos.has(item.id)
   );
   // Series con próximos capítulos
-  const conProximos = catalogo.filter((item) => idsProximos.has(item.id));
+  const conProximos = catalogo
+    .filter((item) => idsProximos.has(item.id))
+    .map((item) => ({ ...item, conProximos: true }));
   // El resto del catálogo (ni viendo ni próximos)
   const resto = catalogo.filter(
     (item) => !conProximos.includes(item) && !viendo.includes(item)
@@ -61,23 +63,17 @@ export default function App() {
             ) : (
               <>
                 <section className="mb-8">
-                  <h2 className="text-xl font-bold mb-2">
-                    Nuevos capítulos
-                  </h2>
-                  <CatalogoGrid
-                    catalogo={conProximos}
-                    onEliminar={eliminarItem}
-                  />
+                  <h2 className="text-xl font-bold mb-2">Nuevos capítulos</h2>
+
+                  <CatalogoGrid catalogo={conProximos} />
                 </section>
                 <section className="mb-8">
-                  <h2 className="text-xl font-bold mb-2">
-                    Continuar viendo
-                  </h2>
-                  <CatalogoGrid catalogo={viendo} onEliminar={eliminarItem} />
+                  <h2 className="text-xl font-bold mb-2">Continuar viendo</h2>
+                  <CatalogoGrid catalogo={viendo} />
                 </section>
                 <section className="sm:flex-nowrap sm:sm:overflow-x-visible sm:min-w-320">
                   <h2 className="text-xl font-bold mb-2">Mi catálogo</h2>
-                  <CatalogoGrid catalogo={resto} onEliminar={eliminarItem} />
+                  <CatalogoGrid catalogo={resto} />
                 </section>
               </>
             )}
