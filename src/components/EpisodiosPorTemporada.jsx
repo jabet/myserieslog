@@ -7,13 +7,13 @@ export default function EpisodiosPorTemporada({
   contenidoId,
   vistos,
   toggle,
+  toggleMultiples,
   idioma,
   usuario,
   enCatalogo,
 }) {
   const [temporadasAbiertas, setTemporadasAbiertas] = useState({});
   const [episodiosPorTemporada, setEpisodiosPorTemporada] = useState({});
-  const [cargando, setCargando] = useState({});
   const [temporadasDisponibles, setTemporadasDisponibles] = useState([]);
   const [mensaje, setMensaje] = useState("");
 
@@ -91,19 +91,18 @@ export default function EpisodiosPorTemporada({
         );
         return;
       }
+
+      const episodiosIds = lista.map((ep) => ep.id);
+
       if (todosVistos) {
-        for (const ep of lista) {
-          if (vistos.includes(ep.id)) {
-            await toggle(ep.id);
-          }
-        }
+        // Desmarcar todos
+        const aDesmarcar = episodiosIds.filter((id) => vistos.includes(id));
+        await toggleMultiples(aDesmarcar, false);
         mostrar("Todos los episodios desmarcados");
       } else {
-        for (const ep of lista) {
-          if (!vistos.includes(ep.id)) {
-            await toggle(ep.id);
-          }
-        }
+        // Marcar todos
+        const aMarcar = episodiosIds.filter((id) => !vistos.includes(id));
+        await toggleMultiples(aMarcar, true);
         mostrar("Todos los episodios marcados como vistos");
       }
     };
