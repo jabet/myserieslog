@@ -24,6 +24,7 @@ const buscarContenido = async (query, tipo = "multi") => {
 
     const data = await response.json();
 
+    // Mejor: Solo los campos que realmente devuelve la búsqueda
     return data.results.map((item) => ({
       id: item.id,
       nombre: item.title || item.name,
@@ -40,11 +41,12 @@ const buscarContenido = async (query, tipo = "multi") => {
       popularidad: item.popularity,
       puntuacion: item.vote_average,
       generos: item.genre_ids || [],
-      duracion: item.runtime || null,
-      temporadas: item.number_of_seasons || null,
-      episodios_totales: item.number_of_episodes || null,
-      estado_serie: item.status || null,
-      en_emision: item.in_production || false,
+      // Los siguientes campos no existen en la búsqueda, puedes omitirlos o dejarlos en null explícitamente
+      duracion: null,
+      temporadas: null,
+      episodios_totales: null,
+      estado_serie: null,
+      en_emision: null,
       tipo: determinarTipo(item, item.media_type || tipo),
     }));
   } catch (error) {
