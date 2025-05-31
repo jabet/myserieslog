@@ -14,6 +14,7 @@ import AdminPanel from "./pages/AdminPanel.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import RedSocial from "./pages/RedSocial.jsx";
 import React from "react";
+import Perfil from "./pages/Perfil.jsx";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
@@ -28,6 +29,7 @@ createRoot(document.getElementById("root")).render(
           <Route path="/admin" element={<AdminPanel />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/social" element={<RedSocial />} />
+          <Route path="/perfil" element={<Perfil />} />
         </Routes>
       </HashRouter>
      </Theme>

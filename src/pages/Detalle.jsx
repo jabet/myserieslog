@@ -13,6 +13,8 @@ import useTMDBDetalle from "../hooks/useTMDBDetalle";
 import SelectorPlataformas from "../components/SelectorPlataformas";
 import { IconosPlataformas } from "../components/IconosPlataformas";
 import { PLATAFORMAS_DISPONIBLES } from "../constants/plataformas";
+import { actualizarProximoEpisodio } from "../utils/calcularProximoEpisodio";
+import { cargarTemporadasCapitulos } from "../utils/cargarTemporadasCapitulos";
 
 export default function Detalle() {
   const { tipo, id } = useParams();
@@ -24,6 +26,7 @@ export default function Detalle() {
   const [vistos, setVistos] = useState([]);
   const [mensaje, setMensaje] = useState("");
   const [plataformas, setPlataformas] = useState([]);
+  const [cargandoTemporadas, setCargandoTemporadas] = useState(false);
 
   // Hook para obtener detalle de TMDb
   const { detalle: tmdbDetalle } = useTMDBDetalle(id, idioma, tipo);
@@ -319,6 +322,9 @@ export default function Detalle() {
           setEstadoCatalogo((prev) => ({ ...prev, estado: "pendiente" }));
         }
       }
+
+      // NUEVO: Recalcular próximo episodio después del cambio
+      await actualizarProximoEpisodio(usuario.id, item.id);
     } catch (error) {
       console.error("Error al actualizar episodio:", error);
       // Si hay error, revierte el cambio optimista
@@ -450,6 +456,62 @@ export default function Detalle() {
       mostrar("Error al actualizar plataformas");
     }
   };
+
+  // NUEVO: Efecto para verificar y cargar temporadas
+  useEffect(() => {
+    const verificarYCargarTemporadas = async () => {
+      if (!item || item.media_type !== "tv") return;
+
+      const { data: episodiosExistentes } = await supabase
+        .from("episodios")
+        .select("id")
+        .eq("contenido_id", item.id)
+        .limit(1);
+
+      if (
+        !episodiosExistentes?.length &&
+        ["Serie", "Anime", "Dorama", "K-Drama"].includes(item.tipo)
+      ) {
+        setCargandoTemporadas(true);
+        mostrar("Cargando temporadas desde TMDb...");
+
+        try {
+          const exito = await cargarTemporadasCapitulos(item.id, idioma);
+          if (exito) {
+            mostrar("Temporadas cargadas correctamente");
+
+            // Recargar episodios vistos para el componente EpisodiosPorTemporada
+            if (usuario) {
+              const { data: episodios } = await supabase
+                .from("episodios")
+                .select("id")
+                .eq("contenido_id", item.id);
+
+              if (episodios) {
+                const episodiosIds = episodios.map((e) => e.id);
+                const { data: vistosData } = await supabase
+                  .from("episodios_vistos")
+                  .select("episodio_id")
+                  .eq("user_id", usuario.id)
+                  .in("episodio_id", episodiosIds);
+
+                setVistos((vistosData || []).map((v) => v.episodio_id));
+              }
+            }
+          } else {
+            mostrar("Error al cargar temporadas");
+          }
+        } catch (error) {
+          console.error("Error cargando temporadas:", error);
+          mostrar("Error al cargar temporadas");
+        } finally {
+          setCargandoTemporadas(false);
+        }
+      }
+    };
+
+    verificarYCargarTemporadas();
+  }, [item, idioma, usuario]);
 
   if (!item) {
     return (

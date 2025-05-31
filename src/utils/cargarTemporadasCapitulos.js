@@ -12,17 +12,18 @@ const TMDB_BASE = "https://api.themoviedb.org/3";
  */
 export async function cargarTemporadasCapitulos(contenidoId, idioma = "es-ES") {
   try {
-    // 1. Obtener info de la serie (para saber cuántas temporadas tiene)
+    console.log(`Cargando temporadas para serie ${contenidoId}...`);
+
+    // 1. Obtener metadatos de la serie
     const metaRes = await fetch(
       `${TMDB_BASE}/tv/${contenidoId}?api_key=${TMDB_API_KEY}&language=${idioma}`
     );
     const meta = await metaRes.json();
     if (!meta.seasons) return false;
 
-    // 2. Para cada temporada, obtener episodios (incluyendo especiales)
-    let episodiosAll = [];
+    // 2. Cargar cada temporada
+    const episodiosAll = [];
     for (const season of meta.seasons) {
-      if (season.season_number === undefined || season.season_number === null) continue;
       const seasonRes = await fetch(
         `${TMDB_BASE}/tv/${contenidoId}/season/${season.season_number}?api_key=${TMDB_API_KEY}&language=${idioma}`
       );
@@ -41,6 +42,8 @@ export async function cargarTemporadasCapitulos(contenidoId, idioma = "es-ES") {
             ? `https://image.tmdb.org/t/p/w300${ep.still_path}`
             : null,
           especial: esEspecial,
+          // NUEVO: Añadir duración del episodio
+          duracion: ep.runtime || meta.episode_run_time?.[0] || 45, // runtime del episodio o duración promedio de la serie o 45 min por defecto
         }))
       );
     }
@@ -56,6 +59,7 @@ export async function cargarTemporadasCapitulos(contenidoId, idioma = "es-ES") {
         console.error("Error upsert episodios:", error);
         return false;
       }
+      console.log(`${episodiosAll.length} episodios cargados/actualizados`);
     }
 
     return true;

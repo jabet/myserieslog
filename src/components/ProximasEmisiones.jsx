@@ -7,10 +7,21 @@ export default function ProximasEmisiones({ emisiones = [] }) {
     );
   }
 
+  // Agrupar por serie y mostrar solo el próximo episodio de cada una
+  const proximosPorSerie = emisiones.reduce((acc, ep) => {
+    if (!acc[ep.contenido_id] || ep.fecha_emision < acc[ep.contenido_id].fecha_emision) {
+      acc[ep.contenido_id] = ep;
+    }
+    return acc;
+  }, {});
+
+  const episodiosUnicos = Object.values(proximosPorSerie)
+    .sort((a, b) => a.fecha_emision.localeCompare(b.fecha_emision));
+
   return (
-    <div className="space-y-4 m-w-10">
+    <div className="space-y-4 m-w-10 max-h-270 overflow-y-auto">
       <h2>Próximas emisiones</h2>
-      {emisiones.map((ep) => (
+      {episodiosUnicos.map((ep) => (
         <div
           key={ep.id}
           className="flex items-start gap-4 p-4 bg-white rounded shadow hover:shadow-md transition"

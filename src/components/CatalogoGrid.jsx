@@ -2,7 +2,7 @@
 import MediaCard from "./MediaCard";
 import React from "react";
 
-export default function CatalogoGrid({ catalogo, }) {
+export default function CatalogoGrid({ catalogo }) {
   if (!Array.isArray(catalogo)) return null;
 
   return (
@@ -27,6 +27,7 @@ export default function CatalogoGrid({ catalogo, }) {
           favorito={item.favorito}
           viendo={item.estado === "viendo"}
           conProximos={item.conProximos}
+          proximoEpisodio={item.proximoEpisodio}
           onVerDetalle={() =>
             (window.location.href = `/#/detalle/${item.media_type}/${item.id}`)
           }

@@ -76,6 +76,10 @@ export default function Navbar() {
                   Admin
                 </Link>
               )}
+              <Link to="/perfil" className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 rounded">
+  <span>👤</span>
+  Mi Perfil
+</Link>
               <button onClick={cerrarSesion} className="text-sm">
                 Cerrar sesión
               </button>

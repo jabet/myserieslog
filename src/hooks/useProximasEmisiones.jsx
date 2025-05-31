@@ -16,7 +16,7 @@ export default function useProximasEmisiones(usuario) {
       const hoy = new Date();
       const hoyStr = hoy.toISOString().split("T")[0];
       const maxDate = new Date(hoy);
-      maxDate.setDate(hoy.getDate() + 90);
+      maxDate.setDate(hoy.getDate() + 90); // <-- CAMBIO: de 90 a 30 días
       const maxDateStr = maxDate.toISOString().split("T")[0];
 
       // 1. Obtener el catálogo del usuario
@@ -52,9 +52,11 @@ export default function useProximasEmisiones(usuario) {
         .in("contenido_id", idsContenido)
         .gte("fecha_emision", hoyStr)
         .lte("fecha_emision", maxDateStr)
-        .order("fecha_emision", { ascending: true });
+        .order("fecha_emision", { ascending: true })
+        .order("temporada", { ascending: true })
+        .order("episodio", { ascending: true });
 
-     // console.log("Episodios próximos:", episodios);
+      // console.log("Episodios próximos:", episodios);
 
       if (errorEpisodios) {
         console.error("Error cargando episodios:", errorEpisodios);
@@ -87,7 +89,7 @@ export default function useProximasEmisiones(usuario) {
           .select("id, contenido_traducciones(nombre, idioma)")
           .in("id", ids);
 
-       // console.log("Contenidos:", contenidos);
+        // console.log("Contenidos:", contenidos);
 
         if (contenidos) {
           for (const c of contenidos) {
