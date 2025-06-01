@@ -15,9 +15,11 @@ import { IconosPlataformas } from "../components/IconosPlataformas";
 import { PLATAFORMAS_DISPONIBLES } from "../constants/plataformas";
 import { actualizarProximoEpisodio } from "../utils/calcularProximoEpisodio";
 import { cargarTemporadasCapitulos } from "../utils/cargarTemporadasCapitulos";
+import { fetchTMDbContent, parseTMDbContent } from "../utils/tmdb";
+import { guardarContenidoTMDb } from "../utils/guardarContenidoTMDb";
 
 export default function Detalle() {
-  const { tipo, id } = useParams();
+  const { media_type, id } = useParams();
   const { usuario, idioma } = useUsuario();
   const [item, setItem] = useState(null);
   const [enCatalogo, setEnCatalogo] = useState(false);
@@ -29,7 +31,7 @@ export default function Detalle() {
   const [cargandoTemporadas, setCargandoTemporadas] = useState(false);
 
   // Hook para obtener detalle de TMDb
-  const { detalle: tmdbDetalle } = useTMDBDetalle(id, idioma, tipo);
+  const { detalle: tmdbDetalle } = useTMDBDetalle(id, idioma, media_type);
 
   // 1) Cargo el contenido y la sinopsis traducida (A)
   useEffect(() => {
@@ -40,7 +42,7 @@ export default function Detalle() {
         .from("contenido")
         .select("*")
         .eq("id", Number(id))
-        .eq("media_type", tipo)
+        .eq("media_type", media_type)
         .single();
 
       if (cancelado) return;
@@ -70,7 +72,7 @@ export default function Detalle() {
     return () => {
       cancelado = true;
     };
-  }, [id, tipo, idioma, tmdbDetalle]);
+  }, [id, media_type, idioma, tmdbDetalle]);
 
   // 2) Estado en catálogo y favorito
   useEffect(() => {
@@ -160,22 +162,11 @@ export default function Detalle() {
         .from("contenido")
         .select("id")
         .eq("id", item.id)
-        .eq("media_type", tipo)
+        .eq("media_type", media_type)
         .maybeSingle();
 
       if (!existente) {
-        await supabase.from("contenido").insert([
-          {
-            id: item.id,
-            tipo: item.tipo,
-            media_type: tipo,
-            nombre: item.nombre,
-            imagen: item.imagen,
-            sinopsis: item.sinopsis,
-            anio: item.anio,
-            finalizada: item.finalizada,
-          },
-        ]);
+        await guardarContenidoTMDb(id, media_type, "es-ES");
       }
 
       // 2. Guarda la relación usuario-contenido
@@ -201,7 +192,7 @@ export default function Detalle() {
         .from("contenido")
         .select("*")
         .eq("id", item.id)
-        .eq("media_type", tipo)
+        .eq("media_type", media_type)
         .single();
       if (nuevoItem) setItem(nuevoItem);
     }
@@ -292,17 +283,17 @@ export default function Detalle() {
         const episodiosValidosIds = episodios.map((e) => e.id);
         const totalEpisodios = episodios.length;
 
-        // Calcular vistos actuales después del cambio
-        const vistosActuales = ya
-          ? vistos.filter(
-              (id) => id !== episodioId && episodiosValidosIds.includes(id)
-            )
-          : [
-              ...vistos.filter((id) => episodiosValidosIds.includes(id)),
-              episodioId,
-            ];
+        // Recarga los episodios vistos reales tras la operación
+        const { data: vistosData } = await supabase
+          .from("episodios_vistos")
+          .select("episodio_id")
+          .eq("user_id", usuario.id)
+          .in("episodio_id", episodiosValidosIds);
 
+        const vistosActuales = (vistosData || []).map((v) => v.episodio_id);
         const vistosCount = vistosActuales.length;
+
+        setVistos(vistosActuales);
 
         if (totalEpisodios > 0 && vistosCount === totalEpisodios) {
           await supabase
@@ -517,6 +508,56 @@ export default function Detalle() {
 
     verificarYCargarTemporadas();
   }, [item, idioma, usuario]);
+
+  const handleAddToCatalog = async () => {
+    if (!usuario || !item) return;
+
+    // 1. Obtener datos completos de TMDb
+    const tmdbRaw = await fetchTMDbContent(media_type, id, idioma);
+    const tmdbParsed = parseTMDbContent(tmdbRaw, media_type);
+
+    // 2. Guardar todos los datos en Supabase
+    await supabase.from("contenido").upsert([
+      {
+        id: tmdbParsed.id,
+        media_type: tmdbParsed.media_type,
+        tipo: tmdbParsed.tipo,
+        nombre: tmdbParsed.nombre,
+        nombre_original: tmdbParsed.nombre_original,
+        sinopsis: tmdbParsed.sinopsis,
+        imagen: tmdbParsed.imagen,
+        backdrop: tmdbParsed.backdrop,
+        anio: tmdbParsed.anio,
+        fecha_estreno: tmdbParsed.fecha_estreno,
+        generos: tmdbParsed.generos,
+        puntuacion: tmdbParsed.puntuacion,
+        popularidad: tmdbParsed.popularidad,
+        duracion: tmdbParsed.duracion,
+        temporadas: tmdbParsed.temporadas,
+        episodios_totales: tmdbParsed.episodios_totales,
+        estado_serie: tmdbParsed.estado_serie,
+        en_emision: tmdbParsed.en_emision,
+        finalizada: tmdbParsed.finalizada,
+        reparto: tmdbParsed.reparto,
+        external_ids: tmdbParsed.external_ids,
+        original_language: tmdbParsed.original_language,
+        origin_country: tmdbParsed.origin_country,
+        genre_ids: tmdbParsed.genre_ids,
+      },
+    ]);
+
+    // 3. Relación usuario-contenido
+    await supabase.from("catalogo_usuario").insert([
+      {
+        user_id: usuario.id,
+        contenido_id: tmdbParsed.id,
+        plataformas: [],
+        favorito: false,
+        estado: "pendiente",
+      },
+    ]);
+    // ...resto de tu lógica...
+  };
 
   if (!item) {
     return (

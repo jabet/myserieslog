@@ -54,6 +54,8 @@ export default function Perfil() {
         .eq("user_id", usuario.id)
         .eq("contenido.media_type", "tv");
 
+      console.log("seriesData", seriesData); // <-- Aquí está el console.log agregado
+
       // 2. Estadísticas de películas - INCLUIR nombre_original
       const { data: peliculasData, error: errorPeliculas } = await supabase
         .from("catalogo_usuario")
@@ -79,7 +81,9 @@ export default function Perfil() {
       const series = {
         total: seriesData?.length || 0,
         viendo: seriesData?.filter((s) => s.estado === "viendo").length || 0,
-        vistas: seriesData?.filter((s) => s.estado === "vista").length || 0,
+        vistas:
+          seriesData?.filter((s) => (s.estado || "").toLowerCase() === "vista")
+            .length || 0,
         pendientes:
           seriesData?.filter((s) => s.estado === "pendiente").length || 0,
       };

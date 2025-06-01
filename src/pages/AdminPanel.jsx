@@ -14,6 +14,8 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import MensajeFlotante from "../components/MensajeFlotante";
 import Papa from "papaparse";
+import { fetchTMDbContent, parseTMDbContent } from "../utils/tmdb";
+import { guardarContenidoTMDb } from "../utils/guardarContenidoTMDb";
 
 export default function AdminPanel() {
   const [user, setUser] = useState(null);
@@ -79,7 +81,30 @@ export default function AdminPanel() {
     supabase
       .from("contenido")
       .select(
-        "id, nombre, tipo, media_type, anio, finalizada, ultima_actualizacion"
+        `
+        id,
+        nombre,
+        nombre_original,
+        tipo,
+        media_type,
+        anio,
+        finalizada,
+        ultima_actualizacion,
+        sinopsis,
+        imagen,
+        backdrop,
+        generos,
+        puntuacion,
+        popularidad,
+        duracion,
+        temporadas,
+        episodios_totales,
+        estado_serie,
+        en_emision,
+        reparto,
+        original_language,
+        origin_country
+      `
       )
       .order(sortBy, { ascending: sortDir === "asc" })
       .then(({ data, error }) => {
@@ -126,35 +151,12 @@ export default function AdminPanel() {
 
   // Forzar actualización de un contenido
   const handleActualizar = async (id, media_type) => {
-    const contenido = contenidos.find((c) => c.id === id);
-    if (!contenido) return;
-
-    // Actualiza solo el nombre si ha cambiado
-    const { error } = await supabase
-      .from("contenido")
-      .update({ nombre: contenido.nombre })
-      .eq("id", id)
-      .eq("media_type", media_type);
-
-    if (error) {
-      mostrarMensaje(`Fallo al actualizar ${id}`);
-    } else {
+    const actualizado = await guardarContenidoTMDb(id, media_type, "es-ES");
+    if (actualizado) {
       mostrarMensaje(`Contenido ${id} actualizado con éxito`);
-      // Opcional: refrescar la fecha de actualización
-      const { data: updated, error: err2 } = await supabase
-        .from("contenido")
-        .select("ultima_actualizacion")
-        .eq("id", id)
-        .single();
-      if (!err2 && updated) {
-        setContenidos((prev) =>
-          prev.map((c) =>
-            c.id === id
-              ? { ...c, ultima_actualizacion: updated.ultima_actualizacion }
-              : c
-          )
-        );
-      }
+      cargarContenidos();
+    } else {
+      mostrarMensaje(`Fallo al actualizar ${id}`);
     }
   };
 
@@ -430,6 +432,7 @@ export default function AdminPanel() {
   };
 
   const [seleccionados, setSeleccionados] = useState([]);
+  const [accionBatch, setAccionBatch] = useState(""); // NUEVO estado para la acción en batch
 
   if (!user) return null;
   if (perfil.role !== "admin")
@@ -511,8 +514,144 @@ export default function AdminPanel() {
                   className="border px-2 py-1 rounded w-24"
                 />
               </div>
+              {/* NUEVO BLOQUE DE ACCIONES EN BATCH */}
+              <div className="my-4 flex gap-2 items-center">
+                <select
+                  value={accionBatch}
+                  onChange={(e) => setAccionBatch(e.target.value)}
+                  className="border px-2 py-1 rounded"
+                >
+                  <option value="">Selecciona una acción</option>
+                  <option value="borrar">Borrar seleccionados</option>
+                  <option value="actualizar_contenido">
+                    Actualizar contenido
+                  </option>
+                  <option value="actualizar_traducciones">
+                    Actualizar traducciones
+                  </option>
+                  <option value="cargar_temporadas">
+                    Cargar temporadas/capítulos
+                  </option>
+                  <option value="forzar_actualizar_temporadas">
+                    Forzar actualización temporadas
+                  </option>
+                  <option value="actualizar_duraciones">
+                    Actualizar duraciones (series)
+                  </option>
+                  <option value="actualizar_duracion_pelicula">
+                    Actualizar duración (películas)
+                  </option>
+                  <option value="actualizar_generos">Actualizar géneros</option>
+                </select>
+                <button
+                  className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                  onClick={async () => {
+                    if (seleccionados.length === 0) {
+                      mostrarMensaje("Selecciona al menos un elemento");
+                      return;
+                    }
+                    if (!accionBatch) {
+                      mostrarMensaje("Selecciona una acción");
+                      return;
+                    }
+                    setLoading(true);
+                    if (accionBatch === "borrar") {
+                      if (
+                        !confirm(
+                          `¿Seguro que quieres borrar ${seleccionados.length} contenidos?`
+                        )
+                      ) {
+                        setLoading(false);
+                        return;
+                      }
+                      const { error } = await supabase
+                        .from("contenido")
+                        .delete()
+                        .in("id", seleccionados);
+                      if (error) {
+                        mostrarMensaje(
+                          "Error al borrar contenidos seleccionados"
+                        );
+                      } else {
+                        setContenidos((prev) =>
+                          prev.filter((c) => !seleccionados.includes(c.id))
+                        );
+                        setSeleccionados([]);
+                        mostrarMensaje("Contenidos borrados correctamente");
+                      }
+                    }
+                    if (accionBatch === "actualizar_contenido") {
+                      for (const id of seleccionados) {
+                        const c = contenidos.find((x) => x.id === id);
+                        if (c) await handleActualizar(c.id, c.media_type);
+                      }
+                      mostrarMensaje("Contenidos actualizados");
+                    }
+                    if (accionBatch === "actualizar_traducciones") {
+                      for (const id of seleccionados) {
+                        const c = contenidos.find((x) => x.id === id);
+                        if (c)
+                          await handleActualizarTraducciones(
+                            c.id,
+                            c.media_type
+                          );
+                      }
+                      mostrarMensaje("Traducciones actualizadas");
+                    }
+                    if (accionBatch === "cargar_temporadas") {
+                      for (const id of seleccionados) {
+                        const c = contenidos.find((x) => x.id === id);
+                        if (c && c.media_type === "tv")
+                          await handleCargarTemporadas(c.id, c.media_type);
+                      }
+                      mostrarMensaje("Temporadas/capítulos cargados");
+                    }
+                    if (accionBatch === "forzar_actualizar_temporadas") {
+                      for (const id of seleccionados) {
+                        const c = contenidos.find((x) => x.id === id);
+                        if (c && c.media_type === "tv")
+                          await handleForzarActualizarTemporadas(
+                            c.id,
+                            c.media_type
+                          );
+                      }
+                      mostrarMensaje("Temporadas actualizadas");
+                    }
+                    if (accionBatch === "actualizar_duraciones") {
+                      for (const id of seleccionados) {
+                        const c = contenidos.find((x) => x.id === id);
+                        if (c && c.media_type === "tv")
+                          await handleActualizarDuraciones(c.id, c.media_type);
+                      }
+                      mostrarMensaje("Duraciones de series actualizadas");
+                    }
+                    if (accionBatch === "actualizar_duracion_pelicula") {
+                      for (const id of seleccionados) {
+                        const c = contenidos.find((x) => x.id === id);
+                        if (c && c.media_type === "movie")
+                          await handleActualizarDuracionPelicula(
+                            c.id,
+                            c.media_type
+                          );
+                      }
+                      mostrarMensaje("Duraciones de películas actualizadas");
+                    }
+                    if (accionBatch === "actualizar_generos") {
+                      for (const id of seleccionados) {
+                        const c = contenidos.find((x) => x.id === id);
+                        if (c)
+                          await handleActualizarGeneros(c.id, c.media_type);
+                      }
+                      mostrarMensaje("Géneros actualizados");
+                    }
+                    setLoading(false);
+                  }}
+                >
+                  Aplicar
+                </button>
+              </div>
 
-              <table className="w-full table-auto border-collapse">
+              <table className="w-full table-auto border-collapse text-sm">
                 <thead>
                   <tr className="bg-gray-100">
                     <th className="border px-2 py-1">
@@ -567,7 +706,11 @@ export default function AdminPanel() {
                     >
                       Última Actualización{sortIcon("ultima_actualizacion")}
                     </th>
-                    <th className="border px-2 py-1">Acciones</th>
+                    <th className="border px-2 py-1">Título original</th>
+                    <th className="border px-2 py-1">Puntuación</th>
+                    <th className="border px-2 py-1">Géneros</th>
+                    <th className="border px-2 py-1">Imagen</th>
+                    {/* Nueva columna */}
                   </tr>
                 </thead>
                 <tbody>
@@ -591,7 +734,7 @@ export default function AdminPanel() {
                       <td className="border px-2 py-1">{c.id}</td>
                       <td className="border px-2 py-1">
                         <a
-                          href={`/contenido/${c.id}`}
+                          href={`#/detalle/${c.media_type}/${c.id}`}
                           className="text-blue-700 underline hover:text-blue-900"
                           target="_blank"
                           rel="noopener noreferrer"
@@ -611,144 +754,34 @@ export default function AdminPanel() {
                       <td className="border px-2 py-1">
                         {formatearFecha(c.ultima_actualizacion)}
                       </td>
-                      <td className="border px-2 py-1 space-x-2">
-                        <button
-                          onClick={() => handleActualizar(c.id, c.media_type)}
-                          className="text-sm bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700"
-                        >
-                          Actualizar contenido
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleActualizarTraducciones(c.id, c.media_type)
-                          }
-                          className="text-sm bg-purple-600 text-white px-2 py-1 rounded hover:bg-purple-700"
-                        >
-                          Actualizar traducciones
-                        </button>
-                        {c.media_type === "tv" && (
-                          <>
-                            <button
-                              onClick={() =>
-                                handleCargarTemporadas(c.id, c.media_type)
-                              }
-                              className="text-sm bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700"
-                            >
-                              Cargar temporadas/capítulos
-                            </button>
-                            <button
-                              onClick={() =>
-                                handleForzarActualizarTemporadas(
-                                  c.id,
-                                  c.media_type
-                                )
-                              }
-                              className="text-sm bg-orange-600 text-white px-2 py-1 rounded hover:bg-orange-700"
-                            >
-                              Forzar actualización temporadas
-                            </button>
-                            <button
-                              onClick={() =>
-                                handleActualizarDuraciones(c.id, c.media_type)
-                              }
-                              className="px-2 py-1 bg-purple-500 text-white text-xs rounded hover:bg-purple-600"
-                              title="Actualizar duraciones"
-                            >
-                              ⏱️ Duraciones
-                            </button>
-                          </>
+                      <td className="border px-2 py-1">{c.nombre_original}</td>
+                      <td className="border px-2 py-1">
+                        {c.puntuacion ?? "-"}
+                      </td>
+                      <td className="border px-2 py-1">
+                        {Array.isArray(c.generos)
+                          ? c.generos.join(", ")
+                          : typeof c.generos === "string"
+                            ? c.generos
+                            : "-"}
+                      </td>
+                      <td className="border px-2 py-1">
+                        {c.imagen && (
+                          <img
+                            src={c.imagen}
+                            alt={c.nombre || "miniatura"}
+                            style={{
+                              width: 40,
+                              borderRadius: 4,
+                              objectFit: "cover",
+                            }}
+                          />
                         )}
-                        {c.media_type === "movie" && (
-                          <button
-                            onClick={() =>
-                              handleActualizarDuracionPelicula(
-                                c.id,
-                                c.media_type
-                              )
-                            }
-                            className="px-2 py-1 bg-indigo-500 text-white text-xs rounded hover:bg-indigo-600"
-                            title="Actualizar duración"
-                          >
-                            🎬 Duración
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleEliminar(c.id)}
-                          className="text-sm bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700"
-                        >
-                          Borrar contenido
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleActualizarGeneros(c.id, c.media_type)
-                          }
-                          className="px-2 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600"
-                          title="Actualizar géneros"
-                        >
-                          🎭 Géneros
-                        </button>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-
-              {/* Controles de paginación */}
-              <div className="flex justify-center gap-2 mt-4">
-                <button
-                  disabled={pagina === 1}
-                  onClick={() => setPagina(pagina - 1)}
-                  className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
-                >
-                  Anterior
-                </button>
-                <span>
-                  Página {pagina} de {totalPaginas}
-                </span>
-                <button
-                  disabled={pagina === totalPaginas}
-                  onClick={() => setPagina(pagina + 1)}
-                  className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
-                >
-                  Siguiente
-                </button>
-              </div>
-
-              {seleccionados.length > 0 && (
-                <div className="my-4 flex gap-2 items-center">
-                  <span>{seleccionados.length} seleccionados</span>
-                  <button
-                    className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
-                    onClick={async () => {
-                      if (
-                        !confirm(
-                          `¿Seguro que quieres borrar ${seleccionados.length} contenidos?`
-                        )
-                      )
-                        return;
-                      setLoading(true);
-                      const { error } = await supabase
-                        .from("contenido")
-                        .delete()
-                        .in("id", seleccionados);
-                      if (error) {
-                        mostrarMensaje(
-                          "Error al borrar contenidos seleccionados"
-                        );
-                      } else {
-                        setContenidos((prev) =>
-                          prev.filter((c) => !seleccionados.includes(c.id))
-                        );
-                        setSeleccionados([]);
-                        mostrarMensaje("Contenidos borrados correctamente");
-                      }
-                      setLoading(false);
-                    }}
-                  >
-                    Borrar seleccionados
-                  </button>
-                </div>
-              )}
             </>
           )
         ) : (
@@ -1041,9 +1074,3 @@ export default function AdminPanel() {
     </>
   );
 }
-
-const handleEditarCampo = (id, campo, valor) => {
-  setContenidos((prev) =>
-    prev.map((c) => (c.id === id ? { ...c, [campo]: valor } : c))
-  );
-};
