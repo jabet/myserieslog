@@ -48,17 +48,14 @@ export async function actualizarContenido(id, mediaType, idioma = "es-ES") {
     // 4. Preparar datos para actualizar
     const datosActualizacion = {
       nombre: data.name || data.title,
-      // NUEVO: Añadir nombre original
       nombre_original: data.original_name || data.original_title,
       anio: fechaEstreno ? new Date(fechaEstreno).getFullYear() : null,
-      sinopsis: data.overview || "Sin sinopsis disponible",
       imagen: data.poster_path
         ? `https://image.tmdb.org/t/p/w500${data.poster_path}`
         : null,
       generos: data.genres?.map((g) => g.name) || [],
       tipo,
       finalizada: data.media_type === "tv" ? data.status === "Ended" : true,
-      // Añadir duración para películas
       ...(data.media_type === "movie" && data.runtime && {
         duracion: data.runtime,
       }),

@@ -86,16 +86,22 @@ export default function PerfilAmigo() {
       const { data: items, error: errCat } = await supabase
         .from("catalogo_usuario")
         .select(
-          `contenido_id,
-           contenido:contenido (
-             id,
-             imagen,
-             tipo,
-             anio,
-             contenido_traducciones!contenido_id(idioma, nombre, sinopsis)
-           )`
+          `
+          contenido_id,
+          contenido:contenido (
+            id,
+            imagen,
+            tipo,
+            media_type,
+            nombre,
+            anio,
+            contenido_traducciones!contenido_id(idioma, nombre, sinopsis)
+          )
+        `
         )
         .eq("user_id", amigoId);
+      //console.log("amigoId usado para buscar catálogo:", amigoId);
+      //console.log("Items recibidos del catálogo amigo:", items);
 
       if (errCat) {
         console.error("Error cargando catálogo amigo:", errCat);
@@ -105,28 +111,23 @@ export default function PerfilAmigo() {
       }
 
       // 2.5) Mapear traducciones al idioma preferido
-
-      const resultados = (items || [])
-        .filter((it) => it.contenido)
-        .map((it) => {
-          const trad =
-            it.contenido.contenido_traducciones?.find(
-              (t) => t.idioma === idioma
-            ) || {};
-          return {
-            id: it.contenido.id,
-            nombre: trad.nombre || it.contenido.nombre || "Sin título",
-            sinopsis:
-              trad.sinopsis ||
-              it.contenido.sinopsis ||
-              "Sin información disponible.",
-            imagen: it.contenido.imagen,
-            anio: it.contenido.anio,
-            tipo: it.contenido.tipo,
-          };
-        });
-
-      setCatalogo(resultados);
+      //console.log("Items antes de filtrar:", items);
+      const resultados = (items || []).map((it, idx) => {
+        // console.log(`Item[${idx}]`, it);
+        const trad =
+          it.contenido?.contenido_traducciones?.find(
+            (t) => t.idioma === idioma
+          ) || {};
+        return {
+          id: it.contenido?.id ?? it.contenido_id ?? `sin_id_${idx}`,
+          nombre: trad.nombre || it.contenido?.nombre || "Sin título",
+          sinopsis: trad.sinopsis || "Sin información disponible.",
+          imagen: it.contenido?.imagen,
+          anio: it.contenido?.anio,
+          tipo: it.contenido?.tipo,
+          media_type: it.contenido?.media_type || it.contenido?.tipo || "movie",
+        };
+      });
 
       setCatalogo(resultados);
       setLoading(false);
@@ -162,7 +163,9 @@ export default function PerfilAmigo() {
                 imagen={c.imagen}
                 anio={c.anio}
                 tipo={c.tipo}
-                onVerDetalle={() => navigate(`/detalle/${c.id}`)}
+                onVerDetalle={() =>
+                  navigate(`/detalle/${c.media_type}/${c.id}`)
+                }
               />
             ))}
           </div>

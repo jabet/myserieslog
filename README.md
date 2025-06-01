@@ -8,5 +8,6 @@
     npm install react-hook-form
     npm install @hookform/resolvers
     npm install zod
+    npm install papaparse
 
 ```

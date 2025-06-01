@@ -13,15 +13,18 @@ import {
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import MensajeFlotante from "../components/MensajeFlotante";
+import Papa from "papaparse";
 
 export default function AdminPanel() {
   const [user, setUser] = useState(null);
   const [perfil, setPerfil] = useState({});
   const [contenidos, setContenidos] = useState([]);
+  const [usuarios, setUsuarios] = useState([]); // Nuevo estado para usuarios
   const [loading, setLoading] = useState(true);
   const [mensaje, setMensaje] = useState("");
   const [sortBy, setSortBy] = useState("id");
   const [sortDir, setSortDir] = useState("asc");
+  const [vistaActual, setVistaActual] = useState("contenidos"); // Estado para la vista actual
 
   // Estados para duraciones
   const [migrandoDuraciones, setMigrandoDuraciones] = useState(false);
@@ -31,6 +34,28 @@ export default function AdminPanel() {
   const [migrandoGeneros, setMigrandoGeneros] = useState(false);
   const [resultadoMigracionGeneros, setResultadoMigracionGeneros] =
     useState(null);
+
+  // Nuevos estados para búsqueda y filtro
+  const [busqueda, setBusqueda] = useState("");
+  const [filtroTipo, setFiltroTipo] = useState("");
+  const [busquedaId, setBusquedaId] = useState(""); // Nuevo estado para búsqueda por ID
+
+  // Estados para paginación
+  const [pagina, setPagina] = useState(1);
+  const porPagina = 25;
+
+  // Mueve esta línea aquí, antes de usarla:
+  const contenidosFiltrados = contenidos.filter(
+    (c) =>
+      (c.nombre || "").toLowerCase().includes(busqueda.toLowerCase()) &&
+      (filtroTipo ? c.media_type === filtroTipo : true) &&
+      (busquedaId === "" || String(c.id).includes(busquedaId))
+  );
+
+  const totalPaginas = Math.ceil(contenidosFiltrados.length / porPagina);
+
+  // Estado para logs de migración
+  const [logsMigracion, setLogsMigracion] = useState([]);
 
   // 1) Cargar sesión y perfil (incluye role)
   useEffect(() => {
@@ -67,6 +92,24 @@ export default function AdminPanel() {
       });
   }, [user, perfil.role, sortBy, sortDir]);
 
+  // Cargar lista de usuarios
+  useEffect(() => {
+    if (!user || perfil.role !== "admin") return;
+    setLoading(true);
+    supabase
+      .from("usuarios")
+      .select("id, role") // Quita created_at si no existe
+      .order(sortBy, { ascending: sortDir === "asc" })
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("Error al cargar usuarios:", error);
+        } else {
+          setUsuarios(data || []);
+        }
+        setLoading(false);
+      });
+  }, [user, perfil.role, sortBy, sortDir, vistaActual]);
+
   // Formatea fecha en DD/MM/AAAA HH:MM
   const formatearFecha = (iso) =>
     iso
@@ -83,17 +126,27 @@ export default function AdminPanel() {
 
   // Forzar actualización de un contenido
   const handleActualizar = async (id, media_type) => {
-    console.log("Actualizando contenido:", id, media_type);
-    const ok = await actualizarContenido(id, media_type);
-    if (ok) {
+    const contenido = contenidos.find((c) => c.id === id);
+    if (!contenido) return;
+
+    // Actualiza solo el nombre si ha cambiado
+    const { error } = await supabase
+      .from("contenido")
+      .update({ nombre: contenido.nombre })
+      .eq("id", id)
+      .eq("media_type", media_type);
+
+    if (error) {
+      mostrarMensaje(`Fallo al actualizar ${id}`);
+    } else {
       mostrarMensaje(`Contenido ${id} actualizado con éxito`);
-      // refrescar la fecha
-      const { data: updated, error } = await supabase
+      // Opcional: refrescar la fecha de actualización
+      const { data: updated, error: err2 } = await supabase
         .from("contenido")
         .select("ultima_actualizacion")
         .eq("id", id)
         .single();
-      if (!error && updated) {
+      if (!err2 && updated) {
         setContenidos((prev) =>
           prev.map((c) =>
             c.id === id
@@ -102,8 +155,6 @@ export default function AdminPanel() {
           )
         );
       }
-    } else {
-      mostrarMensaje(`Fallo al actualizar ${id}`);
     }
   };
 
@@ -254,7 +305,7 @@ export default function AdminPanel() {
     mostrarMensaje("Iniciando migración de duraciones...");
 
     try {
-      const resultado = await migrarTodasLasDuraciones();
+      const resultado = await migrarTodasLasDuraciones(setLogsMigracion);
       setResultadoMigracion(resultado);
       mostrarMensaje(
         `✅ Migración completada: ${resultado.exitosos} exitosos, ${resultado.fallidos} fallidos de ${resultado.total} elementos`
@@ -362,6 +413,24 @@ export default function AdminPanel() {
     }
   };
 
+  // Filtra los contenidos según la búsqueda y el tipo
+  const contenidosPagina = contenidosFiltrados.slice(
+    (pagina - 1) * porPagina,
+    pagina * porPagina
+  );
+
+  const handleExportar = () => {
+    const csv = Papa.unparse(contenidos);
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "contenidos.csv";
+    a.click();
+  };
+
+  const [seleccionados, setSeleccionados] = useState([]);
+
   if (!user) return null;
   if (perfil.role !== "admin")
     return (
@@ -381,141 +450,362 @@ export default function AdminPanel() {
       <main className="pt-20 px-4 max-w-4xl mx-auto">
         <h1 className="text-2xl font-bold mb-4">Panel de Administración</h1>
 
+        {/* NUEVO: Tabs para cambiar entre Contenidos y Usuarios */}
+        <div className="mb-4">
+          <button
+            onClick={() => setVistaActual("contenidos")}
+            className={`px-4 py-2 rounded-l-lg font-medium transition-all ${
+              vistaActual === "contenidos"
+                ? "bg-blue-600 text-white shadow-md"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
+          >
+            📺 Contenidos
+          </button>
+          <button
+            onClick={() => setVistaActual("usuarios")}
+            className={`px-4 py-2 rounded-r-lg font-medium transition-all ${
+              vistaActual === "usuarios"
+                ? "bg-blue-600 text-white shadow-md"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
+          >
+            👥 Usuarios
+          </button>
+        </div>
+
         {loading ? (
-          <p>Cargando contenidos…</p>
-        ) : contenidos.length === 0 ? (
-          <p>No hay contenidos en la base de datos.</p>
-        ) : (
-          <table className="w-full table-auto border-collapse">
-            <thead>
-              <tr className="bg-gray-100">
-                <th
-                  className="border px-2 py-1 cursor-pointer"
-                  onClick={() => handleSort("id")}
+          <p>
+            Cargando {vistaActual === "contenidos" ? "contenidos" : "usuarios"}…
+          </p>
+        ) : vistaActual === "contenidos" ? (
+          contenidos.length === 0 ? (
+            <p>No hay contenidos en la base de datos.</p>
+          ) : (
+            <>
+              {/* NUEVAS INPUTS PARA FILTRAR Y BUSCAR */}
+              <div className="flex gap-4 mb-4">
+                <input
+                  type="text"
+                  placeholder="Buscar por nombre..."
+                  value={busqueda}
+                  onChange={(e) => setBusqueda(e.target.value)}
+                  className="border px-2 py-1 rounded"
+                />
+                <select
+                  value={filtroTipo}
+                  onChange={(e) => setFiltroTipo(e.target.value)}
+                  className="border px-2 py-1 rounded"
                 >
-                  ID{sortIcon("id")}
-                </th>
-                <th
-                  className="border px-2 py-1 cursor-pointer"
-                  onClick={() => handleSort("nombre")}
-                >
-                  Nombre{sortIcon("nombre")}
-                </th>
-                <th
-                  className="border px-2 py-1 cursor-pointer"
-                  onClick={() => handleSort("tipo")}
-                >
-                  Tipo{sortIcon("tipo")}
-                </th>
-                <th
-                  className="border px-2 py-1 cursor-pointer"
-                  onClick={() => handleSort("anio")}
-                >
-                  Año{sortIcon("anio")}
-                </th>
-                <th
-                  className="border px-2 py-1 cursor-pointer"
-                  onClick={() => handleSort("finalizada")}
-                >
-                  Finalizada{sortIcon("finalizada")}
-                </th>
-                <th
-                  className="border px-2 py-1 cursor-pointer"
-                  onClick={() => handleSort("ultima_actualizacion")}
-                >
-                  Última Actualización{sortIcon("ultima_actualizacion")}
-                </th>
-                <th className="border px-2 py-1">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {contenidos.map((c) => (
-                <tr key={c.id}>
-                  <td className="border px-2 py-1">{c.id}</td>
-                  <td className="border px-2 py-1">{c.nombre}</td>
-                  <td className="border px-2 py-1">{c.media_type}</td>
-                  <td className="border px-2 py-1">{c.anio}</td>
-                  <td className="border px-2 py-1">
-                    {c.finalizada ? "Sí" : "No"}
-                  </td>
-                  <td className="border px-2 py-1">
-                    {formatearFecha(c.ultima_actualizacion)}
-                  </td>
-                  <td className="border px-2 py-1 space-x-2">
-                    <button
-                      onClick={() => handleActualizar(c.id, c.media_type)}
-                      className="text-sm bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700"
-                    >
-                      Actualizar contenido
-                    </button>
-                    <button
-                      onClick={() =>
-                        handleActualizarTraducciones(c.id, c.media_type)
-                      }
-                      className="text-sm bg-purple-600 text-white px-2 py-1 rounded hover:bg-purple-700"
-                    >
-                      Actualizar traducciones
-                    </button>
-                    {c.media_type === "tv" && (
-                      <>
-                        <button
-                          onClick={() =>
-                            handleCargarTemporadas(c.id, c.media_type)
-                          }
-                          className="text-sm bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700"
-                        >
-                          Cargar temporadas/capítulos
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleForzarActualizarTemporadas(c.id, c.media_type)
-                          }
-                          className="text-sm bg-orange-600 text-white px-2 py-1 rounded hover:bg-orange-700"
-                        >
-                          Forzar actualización temporadas
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleActualizarDuraciones(c.id, c.media_type)
-                          }
-                          className="px-2 py-1 bg-purple-500 text-white text-xs rounded hover:bg-purple-600"
-                          title="Actualizar duraciones"
-                        >
-                          ⏱️ Duraciones
-                        </button>
-                      </>
-                    )}
-                    {c.media_type === "movie" && (
-                      <button
-                        onClick={() =>
-                          handleActualizarDuracionPelicula(c.id, c.media_type)
+                  <option value="">Todos los tipos</option>
+                  <option value="movie">Película</option>
+                  <option value="tv">Serie</option>
+                  <option value="anime">Anime</option>
+                </select>
+                {/* NUEVO: Input para buscar por ID */}
+                <input
+                  type="text"
+                  placeholder="Buscar por ID..."
+                  value={busquedaId}
+                  onChange={(e) => setBusquedaId(e.target.value)}
+                  className="border px-2 py-1 rounded w-24"
+                />
+              </div>
+
+              <table className="w-full table-auto border-collapse">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="border px-2 py-1">
+                      <input
+                        type="checkbox"
+                        checked={
+                          seleccionados.length > 0 &&
+                          seleccionados.length === contenidosPagina.length
                         }
-                        className="px-2 py-1 bg-indigo-500 text-white text-xs rounded hover:bg-indigo-600"
-                        title="Actualizar duración"
-                      >
-                        🎬 Duración
-                      </button>
-                    )}
-                    <button
-                      onClick={() => handleEliminar(c.id)}
-                      className="text-sm bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700"
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSeleccionados(contenidosPagina.map((c) => c.id));
+                          } else {
+                            setSeleccionados([]);
+                          }
+                        }}
+                      />
+                    </th>
+                    <th
+                      className="border px-2 py-1 cursor-pointer"
+                      onClick={() => handleSort("id")}
                     >
-                      Borrar contenido
-                    </button>
-                    <button
-                      onClick={() =>
-                        handleActualizarGeneros(c.id, c.media_type)
+                      ID{sortIcon("id")}
+                    </th>
+                    <th
+                      className="border px-2 py-1 cursor-pointer"
+                      onClick={() => handleSort("nombre")}
+                    >
+                      Nombre{sortIcon("nombre")}
+                    </th>
+                    <th
+                      className="border px-2 py-1 cursor-pointer"
+                      onClick={() => handleSort("tipo")}
+                    >
+                      Tipo{sortIcon("tipo")}
+                    </th>
+                    <th
+                      className="border px-2 py-1 cursor-pointer"
+                      onClick={() => handleSort("anio")}
+                    >
+                      Año{sortIcon("anio")}
+                    </th>
+                    <th
+                      className="border px-2 py-1 cursor-pointer"
+                      onClick={() => handleSort("finalizada")}
+                    >
+                      Finalizada{sortIcon("finalizada")}
+                    </th>
+                    <th
+                      className="border px-2 py-1 cursor-pointer"
+                      onClick={() => handleSort("ultima_actualizacion")}
+                    >
+                      Última Actualización{sortIcon("ultima_actualizacion")}
+                    </th>
+                    <th className="border px-2 py-1">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {contenidosPagina.map((c) => (
+                    <tr key={c.id}>
+                      <td className="border px-2 py-1">
+                        <input
+                          type="checkbox"
+                          checked={seleccionados.includes(c.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSeleccionados((prev) => [...prev, c.id]);
+                            } else {
+                              setSeleccionados((prev) =>
+                                prev.filter((id) => id !== c.id)
+                              );
+                            }
+                          }}
+                        />
+                      </td>
+                      <td className="border px-2 py-1">{c.id}</td>
+                      <td className="border px-2 py-1">
+                        <a
+                          href={`/contenido/${c.id}`}
+                          className="text-blue-700 underline hover:text-blue-900"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {c.nombre || (
+                            <span className="text-gray-400 italic">
+                              Sin nombre
+                            </span>
+                          )}
+                        </a>
+                      </td>
+                      <td className="border px-2 py-1">{c.media_type}</td>
+                      <td className="border px-2 py-1">{c.anio}</td>
+                      <td className="border px-2 py-1">
+                        {c.finalizada ? "Sí" : "No"}
+                      </td>
+                      <td className="border px-2 py-1">
+                        {formatearFecha(c.ultima_actualizacion)}
+                      </td>
+                      <td className="border px-2 py-1 space-x-2">
+                        <button
+                          onClick={() => handleActualizar(c.id, c.media_type)}
+                          className="text-sm bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700"
+                        >
+                          Actualizar contenido
+                        </button>
+                        <button
+                          onClick={() =>
+                            handleActualizarTraducciones(c.id, c.media_type)
+                          }
+                          className="text-sm bg-purple-600 text-white px-2 py-1 rounded hover:bg-purple-700"
+                        >
+                          Actualizar traducciones
+                        </button>
+                        {c.media_type === "tv" && (
+                          <>
+                            <button
+                              onClick={() =>
+                                handleCargarTemporadas(c.id, c.media_type)
+                              }
+                              className="text-sm bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700"
+                            >
+                              Cargar temporadas/capítulos
+                            </button>
+                            <button
+                              onClick={() =>
+                                handleForzarActualizarTemporadas(
+                                  c.id,
+                                  c.media_type
+                                )
+                              }
+                              className="text-sm bg-orange-600 text-white px-2 py-1 rounded hover:bg-orange-700"
+                            >
+                              Forzar actualización temporadas
+                            </button>
+                            <button
+                              onClick={() =>
+                                handleActualizarDuraciones(c.id, c.media_type)
+                              }
+                              className="px-2 py-1 bg-purple-500 text-white text-xs rounded hover:bg-purple-600"
+                              title="Actualizar duraciones"
+                            >
+                              ⏱️ Duraciones
+                            </button>
+                          </>
+                        )}
+                        {c.media_type === "movie" && (
+                          <button
+                            onClick={() =>
+                              handleActualizarDuracionPelicula(
+                                c.id,
+                                c.media_type
+                              )
+                            }
+                            className="px-2 py-1 bg-indigo-500 text-white text-xs rounded hover:bg-indigo-600"
+                            title="Actualizar duración"
+                          >
+                            🎬 Duración
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleEliminar(c.id)}
+                          className="text-sm bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700"
+                        >
+                          Borrar contenido
+                        </button>
+                        <button
+                          onClick={() =>
+                            handleActualizarGeneros(c.id, c.media_type)
+                          }
+                          className="px-2 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600"
+                          title="Actualizar géneros"
+                        >
+                          🎭 Géneros
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Controles de paginación */}
+              <div className="flex justify-center gap-2 mt-4">
+                <button
+                  disabled={pagina === 1}
+                  onClick={() => setPagina(pagina - 1)}
+                  className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+                >
+                  Anterior
+                </button>
+                <span>
+                  Página {pagina} de {totalPaginas}
+                </span>
+                <button
+                  disabled={pagina === totalPaginas}
+                  onClick={() => setPagina(pagina + 1)}
+                  className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+                >
+                  Siguiente
+                </button>
+              </div>
+
+              {seleccionados.length > 0 && (
+                <div className="my-4 flex gap-2 items-center">
+                  <span>{seleccionados.length} seleccionados</span>
+                  <button
+                    className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
+                    onClick={async () => {
+                      if (
+                        !confirm(
+                          `¿Seguro que quieres borrar ${seleccionados.length} contenidos?`
+                        )
+                      )
+                        return;
+                      setLoading(true);
+                      const { error } = await supabase
+                        .from("contenido")
+                        .delete()
+                        .in("id", seleccionados);
+                      if (error) {
+                        mostrarMensaje(
+                          "Error al borrar contenidos seleccionados"
+                        );
+                      } else {
+                        setContenidos((prev) =>
+                          prev.filter((c) => !seleccionados.includes(c.id))
+                        );
+                        setSeleccionados([]);
+                        mostrarMensaje("Contenidos borrados correctamente");
                       }
-                      className="px-2 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600"
-                      title="Actualizar géneros"
-                    >
-                      🎭 Géneros
-                    </button>
-                  </td>
+                      setLoading(false);
+                    }}
+                  >
+                    Borrar seleccionados
+                  </button>
+                </div>
+              )}
+            </>
+          )
+        ) : (
+          // Vista de usuarios
+          <>
+            <table className="w-full table-auto border-collapse">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th
+                    className="border px-2 py-1 cursor-pointer"
+                    onClick={() => handleSort("id")}
+                  >
+                    ID{sortIcon("id")}
+                  </th>
+                  <th
+                    className="border px-2 py-1 cursor-pointer"
+                    onClick={() => handleSort("email")}
+                  >
+                    Email{sortIcon("email")}
+                  </th>
+                  <th
+                    className="border px-2 py-1 cursor-pointer"
+                    onClick={() => handleSort("created_at")}
+                  >
+                    Fecha de Creación{sortIcon("created_at")}
+                  </th>
+                  <th
+                    className="border px-2 py-1 cursor-pointer"
+                    onClick={() => handleSort("role")}
+                  >
+                    Rol{sortIcon("role")}
+                  </th>
+                  <th className="border px-2 py-1">Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {usuarios.map((u) => (
+                  <tr key={u.id}>
+                    <td className="border px-2 py-1">{u.id}</td>
+                    <td className="border px-2 py-1">{u.email}</td>
+                    <td className="border px-2 py-1">
+                      {formatearFecha(u.created_at)}
+                    </td>
+                    <td className="border px-2 py-1">{u.role}</td>
+                    <td className="border px-2 py-1 space-x-2">
+                      <button
+                        onClick={() => handleEliminar(u.id)}
+                        className="text-sm bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700"
+                      >
+                        Borrar usuario
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
         )}
 
         {/* NUEVA SECCIÓN: Migración de Datos */}
@@ -735,8 +1025,25 @@ export default function AdminPanel() {
             )}
           </div>
         </section>
+
+        {/* Mostrar logs de migración */}
+        {logsMigracion.length > 0 && (
+          <div className="bg-gray-900 text-green-200 p-2 mt-2 rounded max-h-40 overflow-y-auto text-xs">
+            {logsMigracion.map((log, i) => (
+              <div key={i}>{log}</div>
+            ))}
+          </div>
+        )}
+
+        {/* Usa chart.js o similar para mostrar estadísticas arriba del panel */}
       </main>
       <Footer />
     </>
   );
 }
+
+const handleEditarCampo = (id, campo, valor) => {
+  setContenidos((prev) =>
+    prev.map((c) => (c.id === id ? { ...c, [campo]: valor } : c))
+  );
+};

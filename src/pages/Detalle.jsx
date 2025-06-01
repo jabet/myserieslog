@@ -33,6 +33,7 @@ export default function Detalle() {
 
   // 1) Cargo el contenido y la sinopsis traducida (A)
   useEffect(() => {
+    let cancelado = false;
     const cargarItem = async () => {
       // Busca en la tabla de catálogo/caché usando id y tipo
       const { data, error } = await supabase
@@ -42,6 +43,8 @@ export default function Detalle() {
         .eq("media_type", tipo)
         .single();
 
+      if (cancelado) return;
+
       if (data && !error) {
         const { data: trad } = await supabase
           .from("contenido_traducciones")
@@ -50,21 +53,23 @@ export default function Detalle() {
           .eq("idioma", idioma)
           .maybeSingle();
 
+        if (cancelado) return;
+
         setItem({
           ...data,
           nombre: trad?.nombre || data.nombre,
           sinopsis: trad?.sinopsis || data.sinopsis || "Sin sinopsis.",
         });
-        return;
-      }
-
-      // Si no hay en Supabase, usa el detalle de TMDb (del hook)
-      if (tmdbDetalle) {
+      } else if (tmdbDetalle) {
         setItem(tmdbDetalle);
       }
     };
 
     cargarItem();
+
+    return () => {
+      cancelado = true;
+    };
   }, [id, tipo, idioma, tmdbDetalle]);
 
   // 2) Estado en catálogo y favorito
