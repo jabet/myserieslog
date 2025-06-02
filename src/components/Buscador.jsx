@@ -1,144 +1,17 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../utils/supabaseClient";
+import useBusquedaContenido from "../hooks/useBusquedaContenido";
+import useUsuario from "../hooks/useUsuario";
 
 export default function Buscador() {
   const [query, setQuery] = useState("");
-  const [resultados, setResultados] = useState([]);
-  const [idiomaPreferido, setIdiomaPreferido] = useState("es-ES");
-  const [esAdmin, setEsAdmin] = useState(false);
-  const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY;
   const navigate = useNavigate();
+  const { usuario, idioma, esAdmin } = useUsuario();
 
-  // Cargar idioma preferido del usuario si está logueado
-  useEffect(() => {
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (user) {
-        const { data: pref } = await supabase
-          .from("preferencias_usuario")
-          .select("idioma_preferido")
-          .eq("user_id", user.id)
-          .single();
-        if (pref?.idioma_preferido) {
-          setIdiomaPreferido(
-            pref.idioma_preferido.length === 2
-              ? `${pref.idioma_preferido}-${pref.idioma_preferido.toUpperCase()}`
-              : pref.idioma_preferido
-          );
-        }
-      }
-    });
-  }, []);
+  // Ahora el hook acepta idioma como argumento
+  const { resultados, loading, error } = useBusquedaContenido(query, idioma);
 
-  // Obtener rol del usuario desde la tabla usuarios
-  useEffect(() => {
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (user) {
-        const { data: usuario } = await supabase
-          .from("usuarios")
-          .select("role")
-          .eq("id", user.id)
-          .single();
-        setEsAdmin(usuario?.role === "admin");
-      } else {
-        setEsAdmin(false);
-      }
-    });
-  }, []);
-
-  // Búsqueda híbrida con debounce
-  useEffect(() => {
-    if (query.length < 2) {
-      setResultados([]);
-      return;
-    }
-
-    const timer = setTimeout(async () => {
-      try {
-        // 1. PRIMERO: Buscar en Supabase
-        const idiomaCorto = idiomaPreferido.slice(0, 2);
-        const { data: supabaseResults } = await supabase
-          .from("contenido")
-          .select(
-            `
-            id, 
-            media_type, 
-            tipo, 
-            anio, 
-            imagen,
-            contenido_traducciones!inner(nombre)
-          `
-          )
-          .ilike("contenido_traducciones.nombre", `%${query}%`)
-          .eq("contenido_traducciones.idioma", idiomaCorto)
-          .limit(10);
-
-        // 2. SEGUNDO: Buscar en TMDb para completar resultados
-        const res = await fetch(
-          `https://api.themoviedb.org/3/search/multi?` +
-            `api_key=${TMDB_API_KEY}` +
-            `&language=${idiomaPreferido}` +
-            `&query=${encodeURIComponent(query)}`
-        );
-        const tmdbData = await res.json();
-
-        // Filtrar solo series y películas de TMDb
-        const tmdbResults = (tmdbData.results || [])
-          .filter(
-            (item) => item.media_type === "tv" || item.media_type === "movie"
-          )
-          .slice(0, 10);
-
-        // 3. Combinar resultados, priorizando Supabase
-        const supabaseIds = new Set(
-          (supabaseResults || []).map((item) => item.id)
-        );
-        const tmdbFiltered = tmdbResults.filter(
-          (item) => !supabaseIds.has(item.id)
-        );
-
-        const resultadosCombinados = [
-          ...(supabaseResults || []).map((item) => {
-            // Forzar media_type a "tv" o "movie" siempre
-            let media_type = item.media_type;
-            if (media_type !== "tv" && media_type !== "movie") {
-              if (item.tipo === "Serie") media_type = "tv";
-              else if (item.tipo === "Película") media_type = "movie";
-              else media_type = "movie"; // fallback seguro
-            }
-            return {
-              ...item,
-              nombre: item.contenido_traducciones[0]?.nombre || `ID: ${item.id}`,
-              fromSupabase: true,
-              media_type,
-            };
-          }),
-          ...tmdbFiltered.map((item) => ({
-            id: item.id,
-            media_type: item.media_type,
-            nombre: item.name || item.title,
-            anio: (item.first_air_date || item.release_date)?.slice(0, 4),
-            imagen: item.poster_path
-              ? `https://image.tmdb.org/t/p/w92${item.poster_path}`
-              : null,
-            tipo: item.media_type === "tv" ? "Serie" : "Película",
-            fromSupabase: false,
-          })),
-        ];
-
-        setResultados(resultadosCombinados);
-      } catch (error) {
-        console.error("Error en búsqueda:", error);
-        setResultados([]);
-      }
-    }, 400);
-
-    return () => clearTimeout(timer);
-  }, [query, idiomaPreferido]);
-
-  // Navegar directamente al detalle - NO guardar nada
   const seleccionar = (item) => {
-    //console.log("Navegando a detalle con:", item); // <-- Añade este log
     if (!item?.id || !item.media_type) return;
     navigate(`/detalle/${item.media_type}/${item.id}`);
   };
@@ -151,7 +24,15 @@ export default function Buscador() {
         placeholder="Buscar series, películas o animes..."
         value={query}
         onChange={(e) => setQuery(e.target.value)}
+        aria-label="Buscar contenido"
       />
+
+      {loading && (
+        <div className="absolute left-0 right-0 text-center py-2">Buscando...</div>
+      )}
+      {error && (
+        <div className="absolute left-0 right-0 text-center py-2 text-red-600">{error}</div>
+      )}
 
       {resultados.length > 0 && (
         <ul className="absolute z-10 bg-white border rounded w-full max-h-80 overflow-y-auto shadow-lg">

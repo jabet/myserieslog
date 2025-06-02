@@ -248,4 +248,5 @@ export {
   fetchTMDbContent,
   parseTMDbContent,
   determinarTipo,
+  TMDB_API_KEY,
 };

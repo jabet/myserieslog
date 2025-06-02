@@ -1,8 +1,11 @@
 // src/components/MediaCard.jsx
 import React from "react";
+import PropTypes from "prop-types";
 import { EyeOpenIcon } from "@radix-ui/react-icons";
+import { getTipoColor } from "../utils/colors";
 
 export default function MediaCard({
+  id,
   nombre,
   imagen,
   anio,
@@ -14,27 +17,7 @@ export default function MediaCard({
   onVerDetalle,
   proximoEpisodio,
 }) {
-  // Determina el color del badge según el tipo
-  let bgTipo;
-  switch (tipo) {
-    case "Serie":
-      bgTipo = "bg-blue-500";
-      break;
-    case "Película":
-      bgTipo = "bg-green-500";
-      break;
-    case "Anime":
-      bgTipo = "bg-purple-500";
-      break;
-    case "Dorama":
-      bgTipo = "bg-pink-500";
-      break;
-    case "K-Drama":
-      bgTipo = "bg-yellow-600";
-      break;
-    default:
-      bgTipo = "bg-gray-500";
-  }
+  const bgTipo = getTipoColor(tipo);
 
   return (
     <article className="flex flex-wrap w-full min-w-30 max-w-60 bg-white m-1 shadow rounded overflow-hidden hover:shadow-lg transition duration-200 ease-in-out relative">
@@ -45,7 +28,7 @@ export default function MediaCard({
       )}
 
       <button
-        onClick={() => onVerDetalle(media_type)}
+        onClick={() => onVerDetalle({ id, media_type })}
         className="focus:outline-none w-full text-left "
       >
         <div className="relative">
@@ -78,7 +61,7 @@ export default function MediaCard({
           <span className="text-xs text-gray-700 font-semibold text-right w-full">
             T{proximoEpisodio.temporada}E{proximoEpisodio.episodio}{" "}
           </span>
-          <span className=" inlien-block  text-xs text-gray-700 font-semibold text-right w-full line-clamp-1">
+          <span className="inline-block text-xs text-gray-700 font-semibold text-right w-full line-clamp-1">
             {proximoEpisodio.nombre}
           </span>
         </div>
@@ -86,3 +69,21 @@ export default function MediaCard({
     </article>
   );
 }
+
+MediaCard.propTypes = {
+  id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+  nombre: PropTypes.string.isRequired,
+  imagen: PropTypes.string,
+  anio: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  tipo: PropTypes.string,
+  media_type: PropTypes.string.isRequired,
+  favorito: PropTypes.bool,
+  viendo: PropTypes.bool,
+  conProximos: PropTypes.bool,
+  onVerDetalle: PropTypes.func.isRequired,
+  proximoEpisodio: PropTypes.shape({
+    temporada: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    episodio: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    nombre: PropTypes.string,
+  }),
+};

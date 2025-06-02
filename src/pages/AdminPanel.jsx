@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../utils/supabaseClient";
-import { actualizarContenido } from "../utils/actualizarContenido";
+
 import { actualizarTraducciones } from "../utils/actualizarTraducciones";
 import { cargarTemporadasCapitulos } from "../utils/cargarTemporadasCapitulos";
 import { actualizarDuracionEpisodios } from "../utils/actualizarDuracionEpisodios";
@@ -14,14 +14,17 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import MensajeFlotante from "../components/MensajeFlotante";
 import Papa from "papaparse";
-import { fetchTMDbContent, parseTMDbContent } from "../utils/tmdb";
+
 import { guardarContenidoTMDb } from "../utils/guardarContenidoTMDb";
+import useUsuario from "../hooks/useUsuario"; // <-- Importa el hook correctamente
 
 export default function AdminPanel() {
-  const [user, setUser] = useState(null);
-  const [perfil, setPerfil] = useState({});
+  // Usa el hook para obtener usuario, perfil y permisos
+  const { usuario, perfil, esAdmin, loading: loadingUsuario } = useUsuario();
+
+
   const [contenidos, setContenidos] = useState([]);
-  const [usuarios, setUsuarios] = useState([]); // Nuevo estado para usuarios
+  const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [mensaje, setMensaje] = useState("");
   const [sortBy, setSortBy] = useState("id");
@@ -59,24 +62,9 @@ export default function AdminPanel() {
   // Estado para logs de migración
   const [logsMigracion, setLogsMigracion] = useState([]);
 
-  // 1) Cargar sesión y perfil (incluye role)
+  // 1) Cargar lista de contenidos
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-      if (user) {
-        supabase
-          .from("usuarios")
-          .select("role")
-          .eq("id", user.id)
-          .single()
-          .then(({ data }) => setPerfil(data || {}));
-      }
-    });
-  }, []);
-
-  // 2) Cargar lista de contenidos
-  useEffect(() => {
-    if (!user || perfil.role !== "admin") return;
+    if (!usuario || perfil?.rol !== "admin") return;
     setLoading(true);
     supabase
       .from("contenido")
@@ -115,15 +103,15 @@ export default function AdminPanel() {
         }
         setLoading(false);
       });
-  }, [user, perfil.role, sortBy, sortDir]);
+  }, [usuario, perfil?.rol, sortBy, sortDir]);
 
-  // Cargar lista de usuarios
+  // 2) Cargar lista de usuarios
   useEffect(() => {
-    if (!user || perfil.role !== "admin") return;
+    if (!usuario || perfil?.rol !== "admin") return;
     setLoading(true);
     supabase
       .from("usuarios")
-      .select("id, role") // Quita created_at si no existe
+      .select("id, role")
       .order(sortBy, { ascending: sortDir === "asc" })
       .then(({ data, error }) => {
         if (error) {
@@ -133,7 +121,7 @@ export default function AdminPanel() {
         }
         setLoading(false);
       });
-  }, [user, perfil.role, sortBy, sortDir, vistaActual]);
+  }, [usuario, perfil?.rol, sortBy, sortDir, vistaActual]);
 
   // Formatea fecha en DD/MM/AAAA HH:MM
   const formatearFecha = (iso) =>
@@ -391,29 +379,6 @@ export default function AdminPanel() {
     }
   };
 
-  // Añadir función para limpiar contenido no válido:
-  const handleLimpiarContenidoInvalido = async () => {
-    if (
-      !confirm(
-        "¿Estás seguro de que quieres eliminar el contenido marcado como 'No disponible' en TMDb?"
-      )
-    ) {
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from("contenido")
-      .delete()
-      .contains("generos", ["No disponible"]);
-
-    if (error) {
-      console.error("Error eliminando contenido inválido:", error);
-      mostrarMensaje("Error al eliminar contenido inválido");
-    } else {
-      mostrarMensaje(`${data?.length || 0} elementos inválidos eliminados`);
-      cargarContenidos(); // Recargar lista
-    }
-  };
 
   // Filtra los contenidos según la búsqueda y el tipo
   const contenidosPagina = contenidosFiltrados.slice(
@@ -421,21 +386,14 @@ export default function AdminPanel() {
     pagina * porPagina
   );
 
-  const handleExportar = () => {
-    const csv = Papa.unparse(contenidos);
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "contenidos.csv";
-    a.click();
-  };
 
   const [seleccionados, setSeleccionados] = useState([]);
   const [accionBatch, setAccionBatch] = useState(""); // NUEVO estado para la acción en batch
 
-  if (!user) return null;
-  if (perfil.role !== "admin")
+  // Cambia los checks de acceso:
+  if (loadingUsuario) return null;
+  if (!usuario) return null;
+  if (!esAdmin)
     return (
       <>
         <Navbar />

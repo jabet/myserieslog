@@ -21,7 +21,7 @@ import { guardarContenidoTMDb } from "../utils/guardarContenidoTMDb";
 export default function Detalle() {
   const { media_type, id } = useParams();
   //console.log("Detalle.jsx params:", { media_type, id });
-  const { usuario, idioma } = useUsuario();
+  const { usuario, idioma, esAdmin } = useUsuario();
   const [item, setItem] = useState(null);
   const [enCatalogo, setEnCatalogo] = useState(false);
   const [estadoCatalogo, setEstadoCatalogo] = useState(null);
