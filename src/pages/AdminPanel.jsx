@@ -13,7 +13,7 @@ import {
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import MensajeFlotante from "../components/MensajeFlotante";
-import Papa from "papaparse";
+
 
 import { guardarContenidoTMDb } from "../utils/guardarContenidoTMDb";
 import useUsuario from "../hooks/useUsuario"; // <-- Importa el hook correctamente
