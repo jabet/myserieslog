@@ -20,6 +20,7 @@ import { guardarContenidoTMDb } from "../utils/guardarContenidoTMDb";
 
 export default function Detalle() {
   const { media_type, id } = useParams();
+  //console.log("Detalle.jsx params:", { media_type, id });
   const { usuario, idioma } = useUsuario();
   const [item, setItem] = useState(null);
   const [enCatalogo, setEnCatalogo] = useState(false);
@@ -63,7 +64,7 @@ export default function Detalle() {
           sinopsis: trad?.sinopsis || data.sinopsis || "Sin sinopsis.",
         });
       } else if (tmdbDetalle) {
-        setItem(tmdbDetalle);
+        setItem({ ...tmdbDetalle, desdeTMDB: true });
       }
     };
 
@@ -568,6 +569,11 @@ export default function Detalle() {
     );
   }
 
+  if (!["tv", "movie"].includes(media_type)) {
+    // Puedes mostrar un error o intentar inferirlo desde item.tipo si existe
+    return;
+  }
+
   return (
     <>
       <Navbar />
@@ -694,7 +700,7 @@ export default function Detalle() {
         </section>
         {mensaje && <MensajeFlotante texto={mensaje} />}
 
-        {["Serie", "Anime", "Dorama", "K-Drama"].includes(item.tipo) && (
+        {["Serie", "Anime", "Dorama", "K-Drama"].includes(item.tipo) && !item.desdeTMDB && (
           <section className="mt-8">
             <EpisodiosPorTemporada
               contenidoId={item.id}

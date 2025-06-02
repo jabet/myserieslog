@@ -62,9 +62,10 @@ export default function Navbar() {
           </div>
           {usuario ? (
             <>
-              <span className="text-sm text-gray-300">
-                Hola{perfil?.nick ? `, ${perfil.nick}` : ""} 👋
-              </span>
+              <Link to="/perfil" className="text-sm hover:underline ">
+                {" "}
+                 Hola{perfil?.nick ? `, ${perfil.nick}` : ""} 👋
+              </Link>
               <Link to="/preferencias" className="text-sm hover:underline">
                 Preferencias
               </Link>
@@ -76,10 +77,6 @@ export default function Navbar() {
                   Admin
                 </Link>
               )}
-              <Link to="/perfil" className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 rounded">
-  <span>👤</span>
-  Mi Perfil
-</Link>
               <button onClick={cerrarSesion} className="text-sm">
                 Cerrar sesión
               </button>

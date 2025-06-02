@@ -1,20 +1,18 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../utils/supabaseClient";
-import { detectarTipo } from "../utils/tmdbTypeDetector";
 
 export default function Buscador() {
   const [query, setQuery] = useState("");
   const [resultados, setResultados] = useState([]);
   const [idiomaPreferido, setIdiomaPreferido] = useState("es-ES");
-  const [usuario, setUsuario] = useState(null);
+  const [esAdmin, setEsAdmin] = useState(false);
   const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY;
   const navigate = useNavigate();
 
-  // 1) Cargar usuario y su idioma preferido
+  // Cargar idioma preferido del usuario si está logueado
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
-      setUsuario(user);
       if (user) {
         const { data: pref } = await supabase
           .from("preferencias_usuario")
@@ -32,103 +30,117 @@ export default function Buscador() {
     });
   }, []);
 
-  // 2) Buscar con debounce
+  // Obtener rol del usuario desde la tabla usuarios
+  useEffect(() => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (user) {
+        const { data: usuario } = await supabase
+          .from("usuarios")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+        setEsAdmin(usuario?.role === "admin");
+      } else {
+        setEsAdmin(false);
+      }
+    });
+  }, []);
+
+  // Búsqueda híbrida con debounce
   useEffect(() => {
     if (query.length < 2) {
       setResultados([]);
       return;
     }
+
     const timer = setTimeout(async () => {
-      const res = await fetch(
-        `https://api.themoviedb.org/3/search/multi?` +
-          `api_key=${TMDB_API_KEY}` +
-          `&language=${idiomaPreferido}` +
-          `&query=${encodeURIComponent(query)}`
-      );
-      const data = await res.json();
-      setResultados(data.results || []);
+      try {
+        // 1. PRIMERO: Buscar en Supabase
+        const idiomaCorto = idiomaPreferido.slice(0, 2);
+        const { data: supabaseResults } = await supabase
+          .from("contenido")
+          .select(
+            `
+            id, 
+            media_type, 
+            tipo, 
+            anio, 
+            imagen,
+            contenido_traducciones!inner(nombre)
+          `
+          )
+          .ilike("contenido_traducciones.nombre", `%${query}%`)
+          .eq("contenido_traducciones.idioma", idiomaCorto)
+          .limit(10);
+
+        // 2. SEGUNDO: Buscar en TMDb para completar resultados
+        const res = await fetch(
+          `https://api.themoviedb.org/3/search/multi?` +
+            `api_key=${TMDB_API_KEY}` +
+            `&language=${idiomaPreferido}` +
+            `&query=${encodeURIComponent(query)}`
+        );
+        const tmdbData = await res.json();
+
+        // Filtrar solo series y películas de TMDb
+        const tmdbResults = (tmdbData.results || [])
+          .filter(
+            (item) => item.media_type === "tv" || item.media_type === "movie"
+          )
+          .slice(0, 10);
+
+        // 3. Combinar resultados, priorizando Supabase
+        const supabaseIds = new Set(
+          (supabaseResults || []).map((item) => item.id)
+        );
+        const tmdbFiltered = tmdbResults.filter(
+          (item) => !supabaseIds.has(item.id)
+        );
+
+        const resultadosCombinados = [
+          ...(supabaseResults || []).map((item) => {
+            // Forzar media_type a "tv" o "movie" siempre
+            let media_type = item.media_type;
+            if (media_type !== "tv" && media_type !== "movie") {
+              if (item.tipo === "Serie") media_type = "tv";
+              else if (item.tipo === "Película") media_type = "movie";
+              else media_type = "movie"; // fallback seguro
+            }
+            return {
+              ...item,
+              nombre: item.contenido_traducciones[0]?.nombre || `ID: ${item.id}`,
+              fromSupabase: true,
+              media_type,
+            };
+          }),
+          ...tmdbFiltered.map((item) => ({
+            id: item.id,
+            media_type: item.media_type,
+            nombre: item.name || item.title,
+            anio: (item.first_air_date || item.release_date)?.slice(0, 4),
+            imagen: item.poster_path
+              ? `https://image.tmdb.org/t/p/w92${item.poster_path}`
+              : null,
+            tipo: item.media_type === "tv" ? "Serie" : "Película",
+            fromSupabase: false,
+          })),
+        ];
+
+        setResultados(resultadosCombinados);
+      } catch (error) {
+        console.error("Error en búsqueda:", error);
+        setResultados([]);
+      }
     }, 400);
+
     return () => clearTimeout(timer);
   }, [query, idiomaPreferido]);
 
-  // 3) Seleccionar un resultado y añadir a Supabase
-  const seleccionar = async (item) => {
-    if (!item?.id) return;
-    // Ver si ya existe en contenido
-    const { data: existente } = await supabase
-      .from("contenido")
-      .select("id")
-      .eq("id", item.id)
-      .eq("media_type", item.media_type) // Buscar por media_type también
-      .maybeSingle();
-
-    if (!existente) {
-      // 3.1) Traer datos completos de TMDb
-      const mediaType = item.media_type === "tv" ? "tv" : "movie";
-      const endpoint = mediaType === "tv" ? "tv" : "movie";
-      const res = await fetch(
-        `https://api.themoviedb.org/3/${endpoint}/${item.id}` +
-          `?api_key=${TMDB_API_KEY}&language=${idiomaPreferido}`
-      );
-      const tmdb = await res.json();
-
-      // 3.2) Detectar tipo extendido (Anime, Dorama, K-Drama, Serie o Película)
-      const tipo = detectarTipo(
-        {
-          ...tmdb,
-          genre_ids: tmdb.genre_ids || tmdb.genres?.map((g) => g.id) || [],
-          original_language: tmdb.original_language,
-          origin_country: tmdb.origin_country || [],
-        },
-        mediaType
-      );
-
-      // 3.3) Upsert en contenido (guardar media_type)
-      const { error: err1 } = await supabase.from("contenido").upsert([
-        {
-          id: tmdb.id,
-          tipo,
-          media_type: mediaType, // Guardar media_type ("movie" o "tv")
-          anio:
-            (mediaType === "tv"
-              ? tmdb.first_air_date
-              : tmdb.release_date
-            )?.slice(0, 4) || null,
-          imagen: tmdb.poster_path
-            ? `https://image.tmdb.org/t/p/w500${tmdb.poster_path}`
-            : null,
-          finalizada: mediaType === "tv" ? tmdb.status === "Ended" : true,
-        },
-      ]);
-      if (err1) {
-        console.error("Error al insertar contenido:", err1);
-        return;
-      }
-
-      // 3.4) Upsert en traducciones
-      const idiomaCorto = idiomaPreferido.slice(0, 2);
-      const { error: err2 } = await supabase
-        .from("contenido_traducciones")
-        .upsert(
-          [
-            {
-              contenido_id: tmdb.id,
-              idioma: idiomaCorto,
-              nombre: tmdb.name || tmdb.title,
-              sinopsis: tmdb.overview,
-            },
-          ],
-          { onConflict: "contenido_id,idioma" }
-        );
-      if (err2) {
-        console.error("Error al insertar traducción:", err2);
-        return;
-      }
-    }
-
-    // 3.5) Navegar a detalle usando media_type
+  // Navegar directamente al detalle - NO guardar nada
+  const seleccionar = (item) => {
+    //console.log("Navegando a detalle con:", item); // <-- Añade este log
+    if (!item?.id || !item.media_type) return;
     navigate(`/detalle/${item.media_type}/${item.id}`);
-    
   };
 
   return (
@@ -143,34 +155,38 @@ export default function Buscador() {
 
       {resultados.length > 0 && (
         <ul className="absolute z-10 bg-white border rounded w-full max-h-80 overflow-y-auto shadow-lg">
-          {resultados.map((item) => (
+          {resultados.map((item, index) => (
             <li
-              key={`${item.media_type}-${item.id}`}
+              key={`${item.media_type}-${item.id}-${index}`}
               className="flex items-center gap-3 px-3 py-2 hover:bg-gray-100 cursor-pointer"
               onClick={() => seleccionar(item)}
             >
-              {item.poster_path ? (
+              {item.imagen ? (
                 <img
-                  src={`https://image.tmdb.org/t/p/w92${item.poster_path}`}
-                  alt={item.name || item.title}
+                  src={item.imagen}
+                  alt={item.nombre}
                   className="w-12 h-18 rounded object-cover"
                 />
               ) : (
-                <div className="w-12 h-18 bg-gray-300 rounded" />
+                <div className="w-12 h-18 bg-gray-300 rounded flex items-center justify-center text-xs text-gray-500">
+                  Sin imagen
+                </div>
               )}
 
               <div className="flex-1">
-                <p className="text-sm font-medium text-black hover:underline">
-                  {item.name || item.title}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-black">
+                    {item.nombre}
+                  </p>
+                  {esAdmin && item.fromSupabase && (
+                    <span className="px-1 py-0.5 text-xs bg-green-100 text-green-800 rounded">
+                      Guardado
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center gap-2 text-xs text-gray-500">
-                  <span>
-                    {(item.first_air_date || item.release_date)?.slice(0, 4) ||
-                      ""}
-                  </span>
-                  <span className="uppercase">
-                    {item.media_type === "tv" ? "Serie" : "Película"}
-                  </span>
+                  <span>{item.anio || ""}</span>
+                  <span className="uppercase">{item.tipo}</span>
                 </div>
               </div>
             </li>

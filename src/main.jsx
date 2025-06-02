@@ -23,7 +23,7 @@ createRoot(document.getElementById("root")).render(
         <Routes>
           <Route path="/" element={<App />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/detalle/:tipo/:id" element={<Detalle />} />
+          <Route path="/detalle/:media_type/:id" element={<Detalle />} />
           <Route path="/preferencias" element={<PreferenciasUsuario />} />
           <Route path="/perfil/:nick" element={<PerfilAmigo />} />
           <Route path="/admin" element={<AdminPanel />} />
