@@ -35,7 +35,7 @@ export default function MediaCard({
           <img
             src={imagen || "/placeholder.jpg"}
             alt={nombre}
-            className="w-full max-h-[407px]"
+            className="w-full max-h-[407px] min-h-45 aspect-auto object-cover"
           />
           {conProximos && (
             <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-auto bg-red-500 text-white text-xs font-semibold px-2 py-1 text-center">

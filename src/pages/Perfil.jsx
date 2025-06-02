@@ -11,7 +11,7 @@ import {
 } from "../utils/logros";
 
 export default function Perfil() {
-  const { usuario } = useUsuario();
+  const { usuario, perfil, loading } = useUsuario();
   const [estadisticas, setEstadisticas] = useState({
     series: { total: 0, viendo: 0, vistas: 0, pendientes: 0 },
     peliculas: { total: 0, vistas: 0, pendientes: 0 },
@@ -19,7 +19,6 @@ export default function Perfil() {
     generosFavoritos: [],
     añoActividad: new Date().getFullYear(),
     racha: { actual: 0, mejor: 0 },
-    // NUEVO: Sistema de logros
     logros: {
       desbloqueados: [],
       proximos: [],
@@ -31,45 +30,44 @@ export default function Perfil() {
   useEffect(() => {
     if (!usuario?.id) return;
     cargarEstadisticas();
+    // eslint-disable-next-line
   }, [usuario]);
 
   const cargarEstadisticas = async () => {
     try {
       setEstadisticas((prev) => ({ ...prev, loading: true }));
 
-      // 1. Estadísticas de series - INCLUIR nombre_original
+      // 1. Series
       const { data: seriesData, error: errorSeries } = await supabase
         .from("catalogo_usuario")
         .select(
           `
-        estado,
-        contenido!inner (
-          media_type,
-          nombre,
-          nombre_original,
-          generos
-        )
-      `
+          estado,
+          contenido!inner (
+            media_type,
+            nombre,
+            nombre_original,
+            generos
+          )
+        `
         )
         .eq("user_id", usuario.id)
         .eq("contenido.media_type", "tv");
 
-      console.log("seriesData", seriesData); // <-- Aquí está el console.log agregado
-
-      // 2. Estadísticas de películas - INCLUIR nombre_original
+      // 2. Películas
       const { data: peliculasData, error: errorPeliculas } = await supabase
         .from("catalogo_usuario")
         .select(
           `
-        estado,
-        contenido!inner (
-          media_type,
-          nombre,
-          nombre_original,
-          duracion,
-          generos
-        )
-      `
+          estado,
+          contenido!inner (
+            media_type,
+            nombre,
+            nombre_original,
+            duracion,
+            generos
+          )
+        `
         )
         .eq("user_id", usuario.id)
         .eq("contenido.media_type", "movie");
@@ -332,7 +330,7 @@ export default function Perfil() {
     }
   };
 
-  if (estadisticas.loading) {
+  if (estadisticas.loading || loading) {
     return (
       <div className="min-h-screen flex flex-col">
         <Navbar />

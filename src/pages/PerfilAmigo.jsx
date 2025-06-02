@@ -46,7 +46,7 @@ export default function PerfilAmigo() {
       // 2.1) Obtener datos básicos del amigo por nick
       const { data: perfil, error: errPerfil } = await supabase
         .from("usuarios")
-        .select("id, nick, avatar")
+        .select("user_id, nick, avatar")
         .eq("nick", nick)
         .single();
 
@@ -56,7 +56,7 @@ export default function PerfilAmigo() {
         return;
       }
       setPerfilAmigo(perfil);
-      const amigoId = perfil.id;
+      const amigoId = perfil.user_id;
 
       // 2.2) Verificar relación de amistad y su estado
       const { data: rel } = await supabase
