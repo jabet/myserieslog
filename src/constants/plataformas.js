@@ -8,5 +8,6 @@ export const PLATAFORMAS_DISPONIBLES = [
   { id: "hulu", nombre: "Hulu" },
   { id: "crunchyroll", nombre: "Crunchyroll" },
   { id: "funimation", nombre: "Funimation" },
+  { id: "skyshowtime", nombre: "SkyShowTime" },
   { id: "other", nombre: "Otra" },
 ];
