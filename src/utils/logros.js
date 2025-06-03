@@ -896,7 +896,7 @@ function calcularProgresoLogro(logro, stats) {
         // Se considera logrado si la serie tiene 8 temporadas vistas o está marcada como completa
         return serie && (serie.temporadas_vistas >= 8 || serie.completa === true);
       })(),
-      objetivo: 1
+      objetivo: 8
     }
   };
 
