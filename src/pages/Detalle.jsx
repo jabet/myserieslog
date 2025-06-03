@@ -473,9 +473,30 @@ export default function Detalle() {
         mostrar("Cargando temporadas desde TMDb...");
 
         try {
+          // NUEVO: Asegúrate de que el contenido existe en Supabase antes de cargar temporadas
+          const { data: existente } = await supabase
+            .from("contenido")
+            .select("id")
+            .eq("id", item.id)
+            .eq("media_type", item.media_type)
+            .maybeSingle();
+
+          if (!existente) {
+            await guardarContenidoTMDb(item.id, item.media_type, idioma);
+          }
+
           const exito = await cargarTemporadasCapitulos(item.id, idioma);
           if (exito) {
             mostrar("Temporadas cargadas correctamente");
+
+            // Recargar el item desde Supabase para que tenga las temporadas y episodios recién cargados
+            const { data: nuevoItem } = await supabase
+              .from("contenido")
+              .select("*")
+              .eq("id", item.id)
+              .eq("media_type", media_type)
+              .single();
+            if (nuevoItem) setItem(nuevoItem);
 
             // Recargar episodios vistos para el componente EpisodiosPorTemporada
             if (usuario) {
@@ -700,20 +721,21 @@ export default function Detalle() {
         </section>
         {mensaje && <MensajeFlotante texto={mensaje} />}
 
-        {["Serie", "Anime", "Dorama", "K-Drama"].includes(item.tipo) && !item.desdeTMDB && (
-          <section className="mt-8">
-            <EpisodiosPorTemporada
-              contenidoId={item.id}
-              temporadas={item.temporadas}
-              vistos={vistos}
-              toggle={toggleVisto}
-              toggleMultiples={toggleMultiplesEpisodios}
-              idioma={idioma}
-              usuario={usuario}
-              enCatalogo={enCatalogo}
-            />
-          </section>
-        )}
+        {["Serie", "Anime", "Dorama", "K-Drama"].includes(item.tipo) &&
+          !item.desdeTMDB && (
+            <section className="mt-8">
+              <EpisodiosPorTemporada
+                contenidoId={item.id}
+                temporadas={item.temporadas}
+                vistos={vistos}
+                toggle={toggleVisto}
+                toggleMultiples={toggleMultiplesEpisodios}
+                idioma={idioma}
+                usuario={usuario}
+                enCatalogo={enCatalogo}
+              />
+            </section>
+          )}
       </main>
 
       <Footer />
