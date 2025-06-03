@@ -11,7 +11,7 @@ import {
 } from "../utils/logros";
 
 export default function Perfil() {
-  const { usuario } = useUsuario();
+  const { usuario, perfil, loading } = useUsuario();
   const [estadisticas, setEstadisticas] = useState({
     series: { total: 0, viendo: 0, vistas: 0, pendientes: 0 },
     peliculas: { total: 0, vistas: 0, pendientes: 0 },
@@ -19,7 +19,6 @@ export default function Perfil() {
     generosFavoritos: [],
     añoActividad: new Date().getFullYear(),
     racha: { actual: 0, mejor: 0 },
-    // NUEVO: Sistema de logros
     logros: {
       desbloqueados: [],
       proximos: [],
@@ -27,49 +26,49 @@ export default function Perfil() {
     },
     loading: true,
   });
+  const [mostrarTodosLogros, setMostrarTodosLogros] = useState(false);
 
   useEffect(() => {
     if (!usuario?.id) return;
     cargarEstadisticas();
+    // eslint-disable-next-line
   }, [usuario]);
 
   const cargarEstadisticas = async () => {
     try {
       setEstadisticas((prev) => ({ ...prev, loading: true }));
 
-      // 1. Estadísticas de series - INCLUIR nombre_original
+      // 1. Series
       const { data: seriesData, error: errorSeries } = await supabase
         .from("catalogo_usuario")
         .select(
           `
-        estado,
-        contenido!inner (
-          media_type,
-          nombre,
-          nombre_original,
-          generos
-        )
-      `
+          estado,
+          contenido!inner (
+            media_type,
+            nombre,
+            nombre_original,
+            generos
+          )
+        `
         )
         .eq("user_id", usuario.id)
         .eq("contenido.media_type", "tv");
 
-      console.log("seriesData", seriesData); // <-- Aquí está el console.log agregado
-
-      // 2. Estadísticas de películas - INCLUIR nombre_original
+      // 2. Películas
       const { data: peliculasData, error: errorPeliculas } = await supabase
         .from("catalogo_usuario")
         .select(
           `
-        estado,
-        contenido!inner (
-          media_type,
-          nombre,
-          nombre_original,
-          duracion,
-          generos
-        )
-      `
+          estado,
+          contenido!inner (
+            media_type,
+            nombre,
+            nombre_original,
+            duracion,
+            generos
+          )
+        `
         )
         .eq("user_id", usuario.id)
         .eq("contenido.media_type", "movie");
@@ -107,27 +106,29 @@ export default function Perfil() {
         tiempoTotal: tiempoPeliculas,
       };
 
-      // 3. Episodios vistos - CORREGIDO para usar duraciones reales
-      const { data: episodiosVistosData, error: errorEpisodios } =
-        await supabase
-          .from("episodios_vistos")
-          .select(
-            `
-          episodio_id,
-          episodios (
-            duracion
-          )
-        `
-          )
-          .eq("user_id", usuario.id);
+      // 3. Episodios vistos - SOLO CONTEO EN SUPABASE
+      const { count: episodiosVistos, error: errorEpisodios } = await supabase
+        .from("episodios_vistos")
+        .select("episodio_id", { count: "exact", head: true })
+        .eq("user_id", usuario.id);
 
       if (errorEpisodios) {
         console.error("Error cargando episodios vistos:", errorEpisodios);
       }
 
-      const episodiosVistos = episodiosVistosData?.length || 0;
+      // Si quieres calcular el tiempo total, ahí sí necesitas traer los datos:
+      const { data: episodiosVistosData, error: errorEpisodiosData } =
+        await supabase
+          .from("episodios_vistos")
+          .select(`
+    episodio_id,
+    episodios (
+      duracion
+    )
+  `)
+          .eq("user_id", usuario.id)
+          .range(0, 2999); // Ajusta el rango si tienes más episodios
 
-      // Calcular tiempo total usando duraciones reales
       const tiempoTotal =
         episodiosVistosData?.reduce((acc, ev) => {
           const duracion = ev.episodios?.duracion || 45; // 45 min por defecto si no hay duración
@@ -212,11 +213,19 @@ export default function Perfil() {
             duracion: p.contenido.duracion,
           })) || [];
 
+      const seriesVistasConDetalles =
+        seriesData
+          ?.filter((s) => (s.estado || "").toLowerCase() === "vista")
+          ?.map((s) => ({
+            nombre: s.contenido.nombre,
+            nombre_original: s.contenido.nombre_original,
+          })) || [];
+
       // NUEVO: 7. Calcular logros con estadísticas completas INCLUYENDO películas vistas
       const estadisticasCompletas = {
         series,
         peliculas,
-        episodios: { vistos: episodiosVistos, tiempoTotal },
+        episodios: { vistos: episodiosVistos || 0, tiempoTotal },
         generosFavoritos,
         añoActividad: new Date().getFullYear(),
         racha,
@@ -226,6 +235,7 @@ export default function Perfil() {
         // Estadísticas adicionales para logros especiales
         episodiosNocturnos: 0, // Por implementar
         episodiosFinDeSemana: 0, // Por implementar
+        seriesVistas: seriesVistasConDetalles, // NUEVO: Series vistas
       };
 
       // Calcular logros
@@ -235,11 +245,54 @@ export default function Perfil() {
       const logrosProximos = calcularLogrosProximos(estadisticasCompletas);
       const resumenLogros = obtenerEstadisticasLogros(estadisticasCompletas);
 
+      // NUEVO: Cargar logros desbloqueados desde Supabase
+      const { data: logrosGuardados, error: errorLogrosGuardados } =
+        await supabase
+          .from("logros_usuario")
+          .select("logro_id, desbloqueado_en")
+          .eq("user_id", usuario.id);
+
+      if (errorLogrosGuardados) {
+        console.error("Error cargando logros guardados:", errorLogrosGuardados);
+      }
+
+      // 2. Guarda los nuevos logros desbloqueados
+      for (const logro of logrosDesbloqueados) {
+        const yaGuardado = logrosGuardados?.some((l) => l.logro_id === logro.id);
+        if (!yaGuardado) {
+          await supabase.from("logros_usuario").upsert(
+            [
+              {
+                user_id: usuario.id,
+                logro_id: logro.id,
+                desbloqueado_en: new Date().toISOString(),
+              },
+            ],
+            { onConflict: ["user_id", "logro_id"] }
+          );
+        }
+      }
+
+      // Añadir la fecha de desbloqueo a los logros para mostrarla en la UI
+      let logrosDesbloqueadosConFecha = logrosDesbloqueados.map((logro) => {
+        const guardado = logrosGuardados?.find((l) => l.logro_id === logro.id);
+        return {
+          ...logro,
+          desbloqueado_en: guardado?.desbloqueado_en || null,
+        };
+      });
+
+      // ORDENAR de más reciente a más antiguo
+      logrosDesbloqueadosConFecha = logrosDesbloqueadosConFecha.sort((a, b) => {
+        if (!a.desbloqueado_en) return 1;
+        if (!b.desbloqueado_en) return -1;
+        return new Date(b.desbloqueado_en) - new Date(a.desbloqueado_en);
+      });
+
       setEstadisticas({
         ...estadisticasCompletas,
-        // NUEVO: Logros
         logros: {
-          desbloqueados: logrosDesbloqueados,
+          desbloqueados: logrosDesbloqueadosConFecha,
           proximos: logrosProximos,
           resumen: resumenLogros,
         },
@@ -332,7 +385,7 @@ export default function Perfil() {
     }
   };
 
-  if (estadisticas.loading) {
+  if (estadisticas.loading || loading) {
     return (
       <div className="min-h-screen flex flex-col">
         <Navbar />
@@ -525,27 +578,48 @@ export default function Perfil() {
                   {estadisticas.logros.desbloqueados.length})
                 </h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                  {estadisticas.logros.desbloqueados
-                    .slice(0, 12)
-                    .map((logro) => (
-                      <div
-                        key={logro.id}
-                        className={`text-center p-3 rounded-lg border ${logro.color}`}
-                        title={logro.descripcion}
-                      >
-                        <span className="text-2xl mb-1 block">
-                          {logro.emoji}
+                  {(mostrarTodosLogros
+                    ? estadisticas.logros.desbloqueados
+                    : estadisticas.logros.desbloqueados.slice(0, 12)
+                  ).map((logro) => (
+                    <div
+                      key={logro.id}
+                      className={`text-center p-3 rounded-lg border ${logro.color}`}
+                      title={
+                        logro.descripcion +
+                        (logro.desbloqueado_en
+                          ? `\nDesbloqueado: ${new Date(
+                              logro.desbloqueado_en
+                            ).toLocaleDateString()}`
+                          : "")
+                      }
+                    >
+                      <span className="text-2xl mb-1 block">{logro.emoji}</span>
+                      <span className="text-xs font-medium block leading-tight">
+                        {logro.nombre}
+                      </span>
+                      {logro.desbloqueado_en && (
+                        <span className="text-[10px] text-gray-500 block mt-1">
+                          {new Date(logro.desbloqueado_en).toLocaleDateString()}
                         </span>
-                        <span className="text-xs font-medium block leading-tight">
-                          {logro.nombre}
-                        </span>
-                      </div>
-                    ))}
+                      )}
+                    </div>
+                  ))}
                 </div>
-                {estadisticas.logros.desbloqueados.length > 12 && (
-                  <p className="text-xs text-gray-500 mt-2">
-                    +{estadisticas.logros.desbloqueados.length - 12} logros
-                    más...
+                {estadisticas.logros.desbloqueados.length > 12 && !mostrarTodosLogros && (
+                  <p
+                    className="text-xs text-blue-600 mt-2 cursor-pointer hover:underline"
+                    onClick={() => setMostrarTodosLogros(true)}
+                  >
+                    +{estadisticas.logros.desbloqueados.length - 12} logros más...
+                  </p>
+                )}
+                {estadisticas.logros.desbloqueados.length > 12 && mostrarTodosLogros && (
+                  <p
+                    className="text-xs text-blue-600 mt-2 cursor-pointer hover:underline"
+                    onClick={() => setMostrarTodosLogros(false)}
+                  >
+                    Mostrar menos
                   </p>
                 )}
               </div>

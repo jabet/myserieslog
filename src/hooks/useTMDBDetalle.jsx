@@ -2,25 +2,26 @@ import { useState, useEffect } from "react";
 import { fetchTMDbContent, parseTMDbContent } from "../utils/tmdb";
 import { detectarTipo } from "../utils/tmdbTypeDetector";
 
-export default function useTMDBDetalle(id, idioma) {
+export default function useTMDBDetalle(id, idioma, mediaType) {
   const [detalle, setDetalle] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!id || !idioma) return;
+    if (!id || !idioma || !mediaType) return;
     setDetalle(null);
     setLoading(true);
     setError(null);
 
     const fetchDetalle = async () => {
-      let mediaType = "tv";
       let tmdb;
       try {
-        tmdb = await fetchTMDbContent("tv", id, idioma);
+        tmdb = await fetchTMDbContent(mediaType, id, idioma);
         if (tmdb.success === false) {
-          mediaType = "movie";
-          tmdb = await fetchTMDbContent("movie", id, idioma);
+          setDetalle(null);
+          setError("No encontrado en TMDb");
+          setLoading(false);
+          return;
         }
         const tipoDetect = detectarTipo(
           {
@@ -43,7 +44,7 @@ export default function useTMDBDetalle(id, idioma) {
     };
 
     fetchDetalle();
-  }, [id, idioma]);
+  }, [id, idioma, mediaType]);
 
   return { detalle, loading, error };
 }

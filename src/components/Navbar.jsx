@@ -1,33 +1,27 @@
 // src/components/Navbar.jsx
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../utils/supabaseClient";
 import Buscador from "./Buscador";
+import useUsuario from "../hooks/useUsuario";
 import React from "react";
 
 export default function Navbar() {
-  const [usuario, setUsuario] = useState(null);
-  const [perfil, setPerfil] = useState(null);
+  const { usuario, perfil, esAdmin, loading } = useUsuario();
   const [menuOpen, setMenuOpen] = useState(false);
-
-  useEffect(() => {
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      setUsuario(user);
-      if (user) {
-        const { data } = await supabase
-          .from("usuarios")
-          .select("nick,role")
-          .eq("id", user.id)
-          .single();
-        setPerfil(data);
-      }
-    });
-  }, []);
 
   const cerrarSesion = async () => {
     await supabase.auth.signOut();
     window.location.href = "/login";
   };
+
+  if (loading) {
+    return (
+      <nav className="w-full bg-gradient-to-b from-slate-900 to-sky-900 text-white py-4 px-6 flex items-center justify-between">
+        <span>Cargando...</span>
+      </nav>
+    );
+  }
 
   return (
     <>
@@ -46,7 +40,7 @@ export default function Navbar() {
         <div className="flex-1 flex flex-col items-center xl:items-start">
           <Link to="/" className="text-xl font-bold">
             My Series Log
-            <span className="text-amber-300 text-[0.5em]  flex flex-col items-center justify-between">
+            <span className="text-amber-300 text-[0.5em] flex flex-col items-center justify-between">
               ALPHA
             </span>
           </Link>
@@ -62,24 +56,21 @@ export default function Navbar() {
           </div>
           {usuario ? (
             <>
-              <span className="text-sm text-gray-300">
+              <Link to="/perfil" className="text-sm hover:underline ">
+                {" "}
                 Hola{perfil?.nick ? `, ${perfil.nick}` : ""} 👋
-              </span>
+              </Link>
               <Link to="/preferencias" className="text-sm hover:underline">
                 Preferencias
               </Link>
               <Link to="/social" className="text-sm hover:underline">
                 Social
               </Link>
-              {usuario && perfil?.role === "admin" && (
+              {esAdmin && (
                 <Link to="/admin" className="text-sm hover:underline">
                   Admin
                 </Link>
               )}
-              <Link to="/perfil" className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 rounded">
-  <span>👤</span>
-  Mi Perfil
-</Link>
               <button onClick={cerrarSesion} className="text-sm">
                 Cerrar sesión
               </button>
@@ -124,7 +115,7 @@ export default function Navbar() {
                   Social
                 </Link>
               </li>
-              {usuario && perfil?.role === "admin" && (
+              {esAdmin && (
                 <li>
                   <Link to="/admin" className="text-sm hover:underline">
                     Admin

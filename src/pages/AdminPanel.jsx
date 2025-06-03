@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../utils/supabaseClient";
-import { actualizarContenido } from "../utils/actualizarContenido";
+
 import { actualizarTraducciones } from "../utils/actualizarTraducciones";
 import { cargarTemporadasCapitulos } from "../utils/cargarTemporadasCapitulos";
 import { actualizarDuracionEpisodios } from "../utils/actualizarDuracionEpisodios";
@@ -13,15 +13,16 @@ import {
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import MensajeFlotante from "../components/MensajeFlotante";
-import Papa from "papaparse";
-import { fetchTMDbContent, parseTMDbContent } from "../utils/tmdb";
+
 import { guardarContenidoTMDb } from "../utils/guardarContenidoTMDb";
+import useUsuario from "../hooks/useUsuario"; // <-- Importa el hook correctamente
 
 export default function AdminPanel() {
-  const [user, setUser] = useState(null);
-  const [perfil, setPerfil] = useState({});
+  // Usa el hook para obtener usuario, perfil y permisos
+  const { usuario, perfil, esAdmin, loading: loadingUsuario } = useUsuario();
+
   const [contenidos, setContenidos] = useState([]);
-  const [usuarios, setUsuarios] = useState([]); // Nuevo estado para usuarios
+  const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [mensaje, setMensaje] = useState("");
   const [sortBy, setSortBy] = useState("id");
@@ -59,24 +60,9 @@ export default function AdminPanel() {
   // Estado para logs de migración
   const [logsMigracion, setLogsMigracion] = useState([]);
 
-  // 1) Cargar sesión y perfil (incluye role)
+  // 1) Cargar lista de contenidos
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-      if (user) {
-        supabase
-          .from("usuarios")
-          .select("role")
-          .eq("id", user.id)
-          .single()
-          .then(({ data }) => setPerfil(data || {}));
-      }
-    });
-  }, []);
-
-  // 2) Cargar lista de contenidos
-  useEffect(() => {
-    if (!user || perfil.role !== "admin") return;
+    if (!usuario || perfil?.rol !== "admin") return;
     setLoading(true);
     supabase
       .from("contenido")
@@ -115,16 +101,21 @@ export default function AdminPanel() {
         }
         setLoading(false);
       });
-  }, [user, perfil.role, sortBy, sortDir]);
+  }, [usuario, perfil?.rol, sortBy, sortDir]);
 
-  // Cargar lista de usuarios
+  // 2) Cargar lista de usuarios
   useEffect(() => {
-    if (!user || perfil.role !== "admin") return;
+    if (!usuario || perfil?.rol !== "admin") return;
     setLoading(true);
+
+    // Corrige el campo de orden para usuarios
+    let orden = sortBy;
+    if (vistaActual === "usuarios" && orden === "id") orden = "user_id";
+
     supabase
       .from("usuarios")
-      .select("id, role") // Quita created_at si no existe
-      .order(sortBy, { ascending: sortDir === "asc" })
+      .select("user_id, rol") // <-- created_at eliminado aquí
+      .order(orden, { ascending: sortDir === "asc" })
       .then(({ data, error }) => {
         if (error) {
           console.error("Error al cargar usuarios:", error);
@@ -133,7 +124,7 @@ export default function AdminPanel() {
         }
         setLoading(false);
       });
-  }, [user, perfil.role, sortBy, sortDir, vistaActual]);
+  }, [usuario, perfil?.rol, sortBy, sortDir, vistaActual]);
 
   // Formatea fecha en DD/MM/AAAA HH:MM
   const formatearFecha = (iso) =>
@@ -391,51 +382,19 @@ export default function AdminPanel() {
     }
   };
 
-  // Añadir función para limpiar contenido no válido:
-  const handleLimpiarContenidoInvalido = async () => {
-    if (
-      !confirm(
-        "¿Estás seguro de que quieres eliminar el contenido marcado como 'No disponible' en TMDb?"
-      )
-    ) {
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from("contenido")
-      .delete()
-      .contains("generos", ["No disponible"]);
-
-    if (error) {
-      console.error("Error eliminando contenido inválido:", error);
-      mostrarMensaje("Error al eliminar contenido inválido");
-    } else {
-      mostrarMensaje(`${data?.length || 0} elementos inválidos eliminados`);
-      cargarContenidos(); // Recargar lista
-    }
-  };
-
   // Filtra los contenidos según la búsqueda y el tipo
   const contenidosPagina = contenidosFiltrados.slice(
     (pagina - 1) * porPagina,
     pagina * porPagina
   );
 
-  const handleExportar = () => {
-    const csv = Papa.unparse(contenidos);
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "contenidos.csv";
-    a.click();
-  };
-
   const [seleccionados, setSeleccionados] = useState([]);
   const [accionBatch, setAccionBatch] = useState(""); // NUEVO estado para la acción en batch
 
-  if (!user) return null;
-  if (perfil.role !== "admin")
+  // Cambia los checks de acceso:
+  if (loadingUsuario) return null;
+  if (!usuario) return null;
+  if (!esAdmin)
     return (
       <>
         <Navbar />
@@ -584,6 +543,7 @@ export default function AdminPanel() {
                       for (const id of seleccionados) {
                         const c = contenidos.find((x) => x.id === id);
                         if (c) await handleActualizar(c.id, c.media_type);
+                        await new Promise((res) => setTimeout(res, 250)); // <-- delay aquí
                       }
                       mostrarMensaje("Contenidos actualizados");
                     }
@@ -595,6 +555,7 @@ export default function AdminPanel() {
                             c.id,
                             c.media_type
                           );
+                        await new Promise((res) => setTimeout(res, 250)); // <-- delay aquí
                       }
                       mostrarMensaje("Traducciones actualizadas");
                     }
@@ -603,6 +564,7 @@ export default function AdminPanel() {
                         const c = contenidos.find((x) => x.id === id);
                         if (c && c.media_type === "tv")
                           await handleCargarTemporadas(c.id, c.media_type);
+                        await new Promise((res) => setTimeout(res, 250)); // <-- delay aquí
                       }
                       mostrarMensaje("Temporadas/capítulos cargados");
                     }
@@ -614,6 +576,7 @@ export default function AdminPanel() {
                             c.id,
                             c.media_type
                           );
+                        await new Promise((res) => setTimeout(res, 250)); // <-- delay aquí
                       }
                       mostrarMensaje("Temporadas actualizadas");
                     }
@@ -622,6 +585,7 @@ export default function AdminPanel() {
                         const c = contenidos.find((x) => x.id === id);
                         if (c && c.media_type === "tv")
                           await handleActualizarDuraciones(c.id, c.media_type);
+                        await new Promise((res) => setTimeout(res, 250)); // <-- delay aquí
                       }
                       mostrarMensaje("Duraciones de series actualizadas");
                     }
@@ -633,6 +597,7 @@ export default function AdminPanel() {
                             c.id,
                             c.media_type
                           );
+                        await new Promise((res) => setTimeout(res, 250)); // <-- delay aquí
                       }
                       mostrarMensaje("Duraciones de películas actualizadas");
                     }
@@ -641,6 +606,7 @@ export default function AdminPanel() {
                         const c = contenidos.find((x) => x.id === id);
                         if (c)
                           await handleActualizarGeneros(c.id, c.media_type);
+                        await new Promise((res) => setTimeout(res, 250)); // <-- delay aquí
                       }
                       mostrarMensaje("Géneros actualizados");
                     }
@@ -782,6 +748,56 @@ export default function AdminPanel() {
                   ))}
                 </tbody>
               </table>
+
+              {/* Mostrar rango de resultados y controles de paginación */}
+              <div className="flex flex-col md:flex-row justify-between items-center gap-2 my-4">
+                <span>
+                  Mostrando{" "}
+                  {contenidosFiltrados.length === 0
+                    ? 0
+                    : (pagina - 1) * porPagina + 1}
+                  -{Math.min(pagina * porPagina, contenidosFiltrados.length)} de{" "}
+                  {contenidosFiltrados.length} resultados
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    className="px-2 py-1 rounded bg-gray-200 hover:bg-gray-300"
+                    onClick={() => setPagina((p) => Math.max(1, p - 1))}
+                    disabled={pagina === 1}
+                    aria-label="Página anterior"
+                  >
+                    Anterior
+                  </button>
+                  <span>
+                    Página{" "}
+                    <input
+                      type="number"
+                      min={1}
+                      max={totalPaginas}
+                      value={pagina}
+                      onChange={(e) => {
+                        let val = Number(e.target.value);
+                        if (isNaN(val) || val < 1) val = 1;
+                        if (val > totalPaginas) val = totalPaginas;
+                        setPagina(val);
+                      }}
+                      className="w-12 text-center border rounded"
+                      aria-label="Número de página"
+                    />{" "}
+                    de {totalPaginas}
+                  </span>
+                  <button
+                    className="px-2 py-1 rounded bg-gray-200 hover:bg-gray-300"
+                    onClick={() =>
+                      setPagina((p) => Math.min(totalPaginas, p + 1))
+                    }
+                    disabled={pagina === totalPaginas}
+                    aria-label="Página siguiente"
+                  >
+                    Siguiente
+                  </button>
+                </div>
+              </div>
             </>
           )
         ) : (
@@ -792,43 +808,27 @@ export default function AdminPanel() {
                 <tr className="bg-gray-100">
                   <th
                     className="border px-2 py-1 cursor-pointer"
-                    onClick={() => handleSort("id")}
+                    onClick={() => handleSort("user_id")}
                   >
-                    ID{sortIcon("id")}
+                    ID{sortIcon("user_id")}
                   </th>
                   <th
                     className="border px-2 py-1 cursor-pointer"
-                    onClick={() => handleSort("email")}
+                    onClick={() => handleSort("rol")}
                   >
-                    Email{sortIcon("email")}
-                  </th>
-                  <th
-                    className="border px-2 py-1 cursor-pointer"
-                    onClick={() => handleSort("created_at")}
-                  >
-                    Fecha de Creación{sortIcon("created_at")}
-                  </th>
-                  <th
-                    className="border px-2 py-1 cursor-pointer"
-                    onClick={() => handleSort("role")}
-                  >
-                    Rol{sortIcon("role")}
+                    Rol{sortIcon("rol")}
                   </th>
                   <th className="border px-2 py-1">Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {usuarios.map((u) => (
-                  <tr key={u.id}>
-                    <td className="border px-2 py-1">{u.id}</td>
-                    <td className="border px-2 py-1">{u.email}</td>
-                    <td className="border px-2 py-1">
-                      {formatearFecha(u.created_at)}
-                    </td>
-                    <td className="border px-2 py-1">{u.role}</td>
+                  <tr key={u.user_id}>
+                    <td className="border px-2 py-1">{u.user_id}</td>
+                    <td className="border px-2 py-1">{u.rol}</td>
                     <td className="border px-2 py-1 space-x-2">
                       <button
-                        onClick={() => handleEliminar(u.id)}
+                        onClick={() => handleEliminar(u.user_id)}
                         className="text-sm bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700"
                       >
                         Borrar usuario
@@ -1067,8 +1067,6 @@ export default function AdminPanel() {
             ))}
           </div>
         )}
-
-        {/* Usa chart.js o similar para mostrar estadísticas arriba del panel */}
       </main>
       <Footer />
     </>

@@ -129,6 +129,7 @@ const fetchTMDbContent = async (mediaType, id, idioma = "es-ES") => {
     return {
       ...data,
       success: true,
+      media_type: mediaType,
       title: data.title || data.name,
       original_title: data.original_title || data.original_name,
       release_date: data.release_date || data.first_air_date,
@@ -247,4 +248,5 @@ export {
   fetchTMDbContent,
   parseTMDbContent,
   determinarTipo,
+  TMDB_API_KEY,
 };

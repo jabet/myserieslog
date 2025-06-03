@@ -4,10 +4,11 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../utils/supabaseClient";
 import { Switch } from "@radix-ui/react-switch";
 import Navbar from "../components/Navbar";
+import useUsuario from "../hooks/useUsuario";
 
 export default function RedSocial() {
   const navigate = useNavigate();
-  const [usuario, setUsuario] = useState(null);
+  const { usuario, perfil, loading } = useUsuario();
 
   // búsqueda de usuarios para invitar
   const [query, setQuery] = useState("");
@@ -22,19 +23,16 @@ export default function RedSocial() {
   // lista de amigos aceptados
   const [amigos, setAmigos] = useState([]);
 
-  // al montar, obtenemos usuario y cargamos datos
+  // cargar solicitudes y amigos cuando usuario esté disponible
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return;
-      setUsuario(user);
-      cargarSolicitudes(user.id);
-      cargarAmigos(user.id);
-    });
-  }, []);
+    if (!usuario) return;
+    cargarSolicitudes(usuario.id);
+    cargarAmigos(usuario.id);
+  }, [usuario]);
 
   // buscar usuarios para invitar
   useEffect(() => {
-    if (!query || query.length < 2) {
+    if (!usuario || !query || query.length < 2) {
       setResultados([]);
       return;
     }
@@ -42,9 +40,9 @@ export default function RedSocial() {
     const timeout = setTimeout(async () => {
       const { data, error } = await supabase
         .from("usuarios")
-        .select("id, nick")
+        .select("user_id, nick")
         .ilike("nick", `%${query}%`)
-        .neq("id", usuario.id)
+        .neq("user_id", usuario.id)
         .limit(10);
       if (error) {
         console.error("Buscar usuarios:", error);
@@ -63,12 +61,12 @@ export default function RedSocial() {
     const [{ data: inReq }, { data: outReq }] = await Promise.all([
       supabase
         .from("amistades")
-        .select("id, usuario1(id,nick)")
+        .select("id, usuario1(user_id,nick)")
         .eq("usuario2", uid)
         .eq("estado", "pendiente"),
       supabase
         .from("amistades")
-        .select("id, usuario2(id,nick)")
+        .select("id, usuario2(user_id,nick)")
         .eq("usuario1", uid)
         .eq("estado", "pendiente"),
     ]);
@@ -86,15 +84,14 @@ export default function RedSocial() {
         usuario1,
         usuario2,
         comparte_catalogo,
-        usuarios1:usuarios!amistades_usuario1_fkey(id,nick),
-        usuarios2:usuarios!amistades_usuario2_fkey(id,nick)
+        usuarios1:usuarios!amistades_usuario1_fkey(user_id,nick),
+        usuarios2:usuarios!amistades_usuario2_fkey(user_id,nick)
       `
       )
       .or(
         `and(usuario1.eq.${uid},estado.eq.aceptada),` +
           `and(usuario2.eq.${uid},estado.eq.aceptada)`
       );
-    console.log(data);
     if (error) {
       console.error("Cargar amigos:", error);
       return;
@@ -104,10 +101,10 @@ export default function RedSocial() {
       const amigoObj = esYo1 ? a.usuarios2 : a.usuarios1;
       const amigo = amigoObj
         ? amigoObj
-        : { id: esYo1 ? a.usuario2 : a.usuario1, nick: "—" };
+        : { user_id: esYo1 ? a.usuario2 : a.usuario1, nick: "—" };
       return {
         amistadId: a.id,
-        amigoId: amigo.id,
+        amigoId: amigo.user_id,
         nick: amigo.nick,
         comparte: a.comparte_catalogo,
       };
@@ -158,6 +155,7 @@ export default function RedSocial() {
 
   // responder a solicitud entrante
   async function responder(id, aceptar) {
+    if (!usuario) return;
     await supabase
       .from("amistades")
       .update({ estado: aceptar ? "aceptada" : "rechazada" })
@@ -168,6 +166,7 @@ export default function RedSocial() {
 
   // cancelar invitación enviada
   async function cancelar(id) {
+    if (!usuario) return;
     await supabase
       .from("amistades")
       .delete()
@@ -192,6 +191,28 @@ export default function RedSocial() {
       );
   }
 
+  if (loading) {
+    return (
+      <>
+        <Navbar />
+        <main className="pt-20 px-4 text-center">
+          <span>Cargando usuario...</span>
+        </main>
+      </>
+    );
+  }
+
+  if (!usuario) {
+    return (
+      <>
+        <Navbar />
+        <main className="pt-20 px-4 text-center">
+          <span>Debes iniciar sesión para acceder a la red social.</span>
+        </main>
+      </>
+    );
+  }
+
   return (
     <>
       <Navbar />
@@ -213,12 +234,12 @@ export default function RedSocial() {
           <ul className="space-y-2">
             {resultados.map((u) => (
               <li
-                key={u.id}
+                key={u.user_id}
                 className="flex items-center justify-between bg-white p-2 rounded shadow"
               >
                 <span>{u.nick}</span>
                 <button
-                  onClick={() => enviarInvitacion(u.id)}
+                  onClick={() => enviarInvitacion(u.user_id)}
                   className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
                 >
                   Invitar
@@ -303,17 +324,17 @@ export default function RedSocial() {
                   </span>
                   <div className="flex items-center gap-2">
                     <label className="text-sm">Compartir catálogo</label>
- <Switch
-  checked={a.comparte}
-  onCheckedChange={() => toggleCompartir(a.amistadId, a.comparte)}
-  className="w-12 h-6 bg-gray-200 rounded-full data-[state=checked]:bg-green-500 relative"
->
-  <span
-    className="block w-6 h-6 bg-white rounded-full shadow transition-transform absolute top-0 left-0
-      data-[state=checked]:translate-x-6"
-    data-state={a.comparte ? "checked" : "unchecked"}
-  />
-</Switch>
+                    <Switch
+                      checked={a.comparte}
+                      onCheckedChange={() => toggleCompartir(a.amistadId, a.comparte)}
+                      className="w-12 h-6 bg-gray-200 rounded-full data-[state=checked]:bg-green-500 relative"
+                    >
+                      <span
+                        className="block w-6 h-6 bg-white rounded-full shadow transition-transform absolute top-0 left-0
+                          data-[state=checked]:translate-x-6"
+                        data-state={a.comparte ? "checked" : "unchecked"}
+                      />
+                    </Switch>
                   </div>
                 </li>
               ))}
