@@ -543,6 +543,7 @@ export default function AdminPanel() {
                       for (const id of seleccionados) {
                         const c = contenidos.find((x) => x.id === id);
                         if (c) await handleActualizar(c.id, c.media_type);
+                        await new Promise((res) => setTimeout(res, 250)); // <-- delay aquí
                       }
                       mostrarMensaje("Contenidos actualizados");
                     }
@@ -554,6 +555,7 @@ export default function AdminPanel() {
                             c.id,
                             c.media_type
                           );
+                        await new Promise((res) => setTimeout(res, 250)); // <-- delay aquí
                       }
                       mostrarMensaje("Traducciones actualizadas");
                     }
@@ -562,6 +564,7 @@ export default function AdminPanel() {
                         const c = contenidos.find((x) => x.id === id);
                         if (c && c.media_type === "tv")
                           await handleCargarTemporadas(c.id, c.media_type);
+                        await new Promise((res) => setTimeout(res, 250)); // <-- delay aquí
                       }
                       mostrarMensaje("Temporadas/capítulos cargados");
                     }
@@ -573,6 +576,7 @@ export default function AdminPanel() {
                             c.id,
                             c.media_type
                           );
+                        await new Promise((res) => setTimeout(res, 250)); // <-- delay aquí
                       }
                       mostrarMensaje("Temporadas actualizadas");
                     }
@@ -581,6 +585,7 @@ export default function AdminPanel() {
                         const c = contenidos.find((x) => x.id === id);
                         if (c && c.media_type === "tv")
                           await handleActualizarDuraciones(c.id, c.media_type);
+                        await new Promise((res) => setTimeout(res, 250)); // <-- delay aquí
                       }
                       mostrarMensaje("Duraciones de series actualizadas");
                     }
@@ -592,6 +597,7 @@ export default function AdminPanel() {
                             c.id,
                             c.media_type
                           );
+                        await new Promise((res) => setTimeout(res, 250)); // <-- delay aquí
                       }
                       mostrarMensaje("Duraciones de películas actualizadas");
                     }
@@ -600,6 +606,7 @@ export default function AdminPanel() {
                         const c = contenidos.find((x) => x.id === id);
                         if (c)
                           await handleActualizarGeneros(c.id, c.media_type);
+                        await new Promise((res) => setTimeout(res, 250)); // <-- delay aquí
                       }
                       mostrarMensaje("Géneros actualizados");
                     }

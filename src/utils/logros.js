@@ -414,6 +414,28 @@ export const LOGROS_DEFINICIONES = [
     },
     color: 'bg-yellow-50 text-yellow-800 border-yellow-200'
   },
+  // NUEVO: Logro Trekkie
+  {
+    id: 'trekkie',
+    nombre: 'Trekkie',
+    descripcion: 'Ve 6 películas de Star Trek',
+    emoji: '🖖',
+    categoria: CATEGORIAS_LOGROS.ESPECIALES,
+    condicion: (stats) => {
+      if (!stats.peliculasVistas) return false;
+      // Para contar series y películas:
+      const contenidoStarTrek = [
+        ...(stats.peliculasVistas || []),
+        ...(stats.seriesVistas || [])
+      ].filter(p => {
+        const nombre = (p.nombre || '').toLowerCase();
+        const nombreOriginal = (p.nombre_original || '').toLowerCase();
+        return nombre.includes('star trek') || nombreOriginal.includes('star trek');
+      });
+      return contenidoStarTrek.length >= 6;
+    },
+    color: 'bg-blue-50 text-blue-800 border-blue-200'
+  },
 
 ];
 
@@ -559,6 +581,19 @@ function calcularProgresoLogro(logro, stats) {
           const nombre = (p.nombre || '').toLowerCase();
           const nombreOriginal = (p.nombre_original || '').toLowerCase();
           return nombre.includes('star wars') || nombreOriginal.includes('star wars');
+        }).length;
+      })(),
+      objetivo: 6
+    },
+    'trekkie': {
+      actual: (() => {
+        if (!stats.peliculasVistas || !Array.isArray(stats.peliculasVistas)) {
+          return 0;
+        }
+        return stats.peliculasVistas.filter(p => {
+          const nombre = (p.nombre || '').toLowerCase();
+          const nombreOriginal = (p.nombre_original || '').toLowerCase();
+          return nombre.includes('star trek') || nombreOriginal.includes('star trek');
         }).length;
       })(),
       objetivo: 6
