@@ -640,6 +640,34 @@ export const LOGROS_DEFINICIONES = [
       }).length >= 3;
     },
     color: 'bg-red-50 text-red-800 border-red-200'
+  },
+  {
+    id: 'got_fan',
+    nombre: 'El Trono es Mío',
+    descripcion: 'Ve las 8 temporadas de Juego de Tronos',
+    emoji: '🐉',
+    categoria: CATEGORIAS_LOGROS.ESPECIALES,
+    condicion: (stats) => {
+      if (!stats.seriesVistas || !Array.isArray(stats.seriesVistas)) return 0;
+
+      // Busca la serie Juego de Tronos y verifica si tiene 8 temporadas vistas
+      const palabrasClaveGoT = [
+        'juego de tronos',
+        'game of thrones'
+      ];
+
+      const serie = stats.seriesVistas.find(serie => {
+        const nombre = (serie.nombre || '').toLowerCase();
+        const nombreOriginal = (serie.nombre_original || '').toLowerCase();
+        return palabrasClaveGoT.some(keyword =>
+          nombre.includes(keyword) || nombreOriginal.includes(keyword)
+        );
+      });
+
+      // Se considera logrado si la serie tiene 8 temporadas vistas o está marcada como completa
+      return serie && (serie.temporadas_vistas >= 8 || serie.completa === true);
+    },
+    color: 'bg-gray-50 text-gray-800 border-gray-300'
   }
 
 ];
@@ -846,6 +874,29 @@ function calcularProgresoLogro(logro, stats) {
         }).length;
       })(),
       objetivo: 7
+    },
+    'got_fan': {
+      actual: (() => {
+        if (!stats.seriesVistas || !Array.isArray(stats.seriesVistas)) return 0;
+
+        // Busca la serie Juego de Tronos y verifica si tiene 8 temporadas vistas
+        const palabrasClaveGoT = [
+          'juego de tronos',
+          'game of thrones'
+        ];
+
+        const serie = stats.seriesVistas.find(serie => {
+          const nombre = (serie.nombre || '').toLowerCase();
+          const nombreOriginal = (serie.nombre_original || '').toLowerCase();
+          return palabrasClaveGoT.some(keyword =>
+            nombre.includes(keyword) || nombreOriginal.includes(keyword)
+          );
+        });
+
+        // Se considera logrado si la serie tiene 8 temporadas vistas o está marcada como completa
+        return serie && (serie.temporadas_vistas >= 8 || serie.completa === true);
+      })(),
+      objetivo: 1
     }
   };
 
