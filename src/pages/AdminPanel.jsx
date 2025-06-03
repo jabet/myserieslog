@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../utils/supabaseClient";
+import { detectarTipo } from "../utils/tmdbTypeDetector"; // Asegúrate de importar la función
 
 import { actualizarTraducciones } from "../utils/actualizarTraducciones";
 import { cargarTemporadasCapitulos } from "../utils/cargarTemporadasCapitulos";
@@ -18,7 +19,7 @@ import { guardarContenidoTMDb } from "../utils/guardarContenidoTMDb";
 import useUsuario from "../hooks/useUsuario"; // <-- Importa el hook correctamente
 
 export default function AdminPanel() {
-  // Usa el hook para obtener usuario, perfil y permisos
+  // TODOS los useState y useEffect aquí, ANTES de cualquier return o if
   const { usuario, perfil, esAdmin, loading: loadingUsuario } = useUsuario();
 
   const [contenidos, setContenidos] = useState([]);
@@ -47,11 +48,13 @@ export default function AdminPanel() {
   const [pagina, setPagina] = useState(1);
   const porPagina = 25;
 
+  const [tiposDisponibles, setTiposDisponibles] = useState([]);
+
   // Mueve esta línea aquí, antes de usarla:
   const contenidosFiltrados = contenidos.filter(
     (c) =>
       (c.nombre || "").toLowerCase().includes(busqueda.toLowerCase()) &&
-      (filtroTipo ? c.media_type === filtroTipo : true) &&
+      (filtroTipo ? c.tipo === filtroTipo : true) &&
       (busquedaId === "" || String(c.id).includes(busquedaId))
   );
 
@@ -381,6 +384,14 @@ export default function AdminPanel() {
       setLoading(false);
     }
   };
+  // Añade este useEffect después de cargar los contenidos:
+  useEffect(() => {
+    // Extrae tipos únicos de "tipo" en vez de "media_type"
+    const tipos = Array.from(
+      new Set(contenidos.map((c) => c.tipo).filter(Boolean))
+    );
+    setTiposDisponibles(tipos);
+  }, [contenidos]);
 
   // Filtra los contenidos según la búsqueda y el tipo
   const contenidosPagina = contenidosFiltrados.slice(
@@ -404,6 +415,47 @@ export default function AdminPanel() {
         <Footer />
       </>
     );
+
+  // Nueva función para recalcular el tipo de un contenido individual
+  const handleRecalcularTipo = async (id) => {
+    const contenido = contenidos.find((c) => c.id === id);
+    if (!contenido) return;
+
+    // Recalcula el tipo usando la función de utilidad
+    const nuevoTipo = detectarTipo(
+      contenido,
+      contenido.media_type,
+      contenido.generos
+    );
+
+    // Actualiza en la base de datos solo si cambia
+    if (nuevoTipo && nuevoTipo !== contenido.tipo) {
+      const { error } = await supabase
+        .from("contenido")
+        .update({ tipo: nuevoTipo })
+        .eq("id", id);
+
+      if (!error) {
+        setContenidos((prev) =>
+          prev.map((c) => (c.id === id ? { ...c, tipo: nuevoTipo } : c))
+        );
+        mostrarMensaje(`Tipo recalculado: ${nuevoTipo}`);
+      } else {
+        mostrarMensaje("Error al actualizar el tipo");
+      }
+    } else {
+      mostrarMensaje("El tipo ya está correcto");
+    }
+  };
+
+  // Nueva acción batch para recalcular tipo de varios seleccionados
+  const handleBatchRecalcularTipo = async () => {
+    for (const id of seleccionados) {
+      await handleRecalcularTipo(id);
+      await new Promise((res) => setTimeout(res, 150));
+    }
+    mostrarMensaje("Tipos recalculados");
+  };
 
   return (
     <>
@@ -460,9 +512,11 @@ export default function AdminPanel() {
                   className="border px-2 py-1 rounded"
                 >
                   <option value="">Todos los tipos</option>
-                  <option value="movie">Película</option>
-                  <option value="tv">Serie</option>
-                  <option value="anime">Anime</option>
+                  {tiposDisponibles.map((tipo) => (
+                    <option key={tipo} value={tipo}>
+                      {tipo}
+                    </option>
+                  ))}
                 </select>
                 {/* NUEVO: Input para buscar por ID */}
                 <input
@@ -501,6 +555,7 @@ export default function AdminPanel() {
                     Actualizar duración (películas)
                   </option>
                   <option value="actualizar_generos">Actualizar géneros</option>
+                  <option value="recalcular_tipo">Recalcular tipo</option>
                 </select>
                 <button
                   className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
@@ -610,6 +665,11 @@ export default function AdminPanel() {
                       }
                       mostrarMensaje("Géneros actualizados");
                     }
+                    if (accionBatch === "recalcular_tipo") {
+                      await handleBatchRecalcularTipo();
+                      setLoading(false);
+                      return;
+                    }
                     setLoading(false);
                   }}
                 >
@@ -712,7 +772,7 @@ export default function AdminPanel() {
                           )}
                         </a>
                       </td>
-                      <td className="border px-2 py-1">{c.media_type}</td>
+                      <td className="border px-2 py-1">{c.tipo}</td>
                       <td className="border px-2 py-1">{c.anio}</td>
                       <td className="border px-2 py-1">
                         {c.finalizada ? "Sí" : "No"}
@@ -743,6 +803,15 @@ export default function AdminPanel() {
                             }}
                           />
                         )}
+                      </td>
+                      <td className="border px-2 py-1">
+                        <button
+                          className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded hover:bg-blue-200"
+                          onClick={() => handleRecalcularTipo(c.id)}
+                          title="Recalcular tipo"
+                        >
+                          Recalcular tipo
+                        </button>
                       </td>
                     </tr>
                   ))}
