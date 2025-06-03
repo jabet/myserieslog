@@ -462,7 +462,7 @@ export const LOGROS_DEFINICIONES = [
   },
   {
     id: 'harry_potter_fan',
-    nombre: 'Magizoólogo',
+    nombre: 'Mago de Hogwarts',
     descripcion: 'Ve 7 películas de Harry Potter',
     emoji: '🧙‍♂️',
     categoria: CATEGORIAS_LOGROS.ESPECIALES,
