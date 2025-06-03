@@ -414,6 +414,196 @@ export const LOGROS_DEFINICIONES = [
     },
     color: 'bg-yellow-50 text-yellow-800 border-yellow-200'
   },
+  {
+    id: 'mutante',
+    nombre: 'Mutante',
+    descripcion: 'Ve al menos 5 títulos de X-Men (series o películas)',
+    emoji: '🧬',
+    categoria: CATEGORIAS_LOGROS.ESPECIALES,
+    condicion: (stats) => {
+      if (!stats.peliculasVistas && !stats.seriesVistas) return false;
+
+      // Unifica películas y series vistas
+      const titulos = [
+        ...(stats.peliculasVistas || []),
+        ...(stats.seriesVistas || [])
+      ];
+
+      // Palabras clave para X-Men
+      const palabrasClaveXmen = [
+        'x-men', 'wolverine', 'logan', 'new mutants', 'deadpool'
+      ];
+
+      const titulosXmen = titulos.filter(titulo => {
+        const nombre = (titulo.nombre || '').toLowerCase();
+        const nombreOriginal = (titulo.nombre_original || '').toLowerCase();
+        return palabrasClaveXmen.some(keyword =>
+          nombre.includes(keyword) || nombreOriginal.includes(keyword)
+        );
+      });
+
+      return titulosXmen.length >= 5;
+    },
+    color: 'bg-indigo-50 text-indigo-800 border-indigo-200'
+  },
+  {
+    id: 'hulk_fan',
+    nombre: 'Fanático de Hulk',
+    descripcion: 'Ve 3 películas del Increíble Hulk',
+    emoji: '🟢',
+    categoria: CATEGORIAS_LOGROS.ESPECIALES,
+    condicion: (stats) => {
+      if (!stats.peliculasVistas || !Array.isArray(stats.peliculasVistas)) return 0;
+
+      const palabrasClaveHulk = [
+        'hulk', 'incredible hulk', 'el increíble hulk', 'the incredible hulk'
+      ];
+
+      return stats.peliculasVistas.filter(pelicula => {
+        const nombre = (pelicula.nombre || '').toLowerCase();
+        const nombreOriginal = (pelicula.nombre_original || '').toLowerCase();
+        return palabrasClaveHulk.some(keyword =>
+          nombre.includes(keyword) || nombreOriginal.includes(keyword)
+        );
+      }).length;
+    },
+    color: 'bg-green-50 text-green-800 border-green-200'
+  },
+  {
+    id: 'antman_fan',
+    nombre: 'Fanático de Ant-Man',
+    descripcion: 'Ve 2 películas de Ant-Man',
+    emoji: '🐜',
+    categoria: CATEGORIAS_LOGROS.ESPECIALES,
+    condicion: (stats) => {
+      if (!stats.peliculasVistas || !Array.isArray(stats.peliculasVistas)) return 0;
+
+      const palabrasClaveAntman = [
+        'ant-man', 'ant man', 'antman'
+      ];
+
+      return stats.peliculasVistas.filter(pelicula => {
+        const nombre = (pelicula.nombre || '').toLowerCase();
+        const nombreOriginal = (pelicula.nombre_original || '').toLowerCase();
+        return palabrasClaveAntman.some(keyword =>
+          nombre.includes(keyword) || nombreOriginal.includes(keyword)
+        );
+      }).length;
+    },
+    color: 'bg-purple-50 text-purple-800 border-purple-200'
+  },
+  {
+    id: 'flash_fan',
+    nombre: 'Fanático de Flash',
+    descripcion: 'Ve 3 películas o episodios de Flash',
+    emoji: '⚡',
+    categoria: CATEGORIAS_LOGROS.ESPECIALES,
+    condicion: (stats) => {
+      if (
+        (!stats.peliculasVistas || !Array.isArray(stats.peliculasVistas)) &&
+        (!stats.seriesVistas || !Array.isArray(stats.seriesVistas))
+      ) return 0;
+
+      const titulos = [
+        ...(stats.peliculasVistas || []),
+        ...(stats.seriesVistas || [])
+      ];
+
+      const palabrasClaveFlash = [
+        'flash', 'the flash'
+      ];
+
+      return titulos.filter(titulo => {
+        const nombre = (titulo.nombre || '').toLowerCase();
+        const nombreOriginal = (titulo.nombre_original || '').toLowerCase();
+        return palabrasClaveFlash.some(keyword =>
+          nombre.includes(keyword) || nombreOriginal.includes(keyword)
+        );
+      }).length;
+    },
+    color: 'bg-blue-50 text-blue-800 border-blue-200'
+  },
+  {
+    id: 'lotr_fan',
+    nombre: 'Fanático de LOTR',
+    descripcion: 'Ve 3 películas de El Señor de los Anillos',
+    emoji: '💍',
+    categoria: CATEGORIAS_LOGROS.ESPECIALES,
+    condicion: (stats) => {
+      if (!stats.peliculasVistas || !Array.isArray(stats.peliculasVistas)) return 0;
+
+      const palabrasClaveLOTR = [
+        'el señor de los anillos',
+        'the lord of the rings',
+        'lotr'
+      ];
+
+      return stats.peliculasVistas.filter(pelicula => {
+        const nombre = (pelicula.nombre || '').toLowerCase();
+        const nombreOriginal = (pelicula.nombre_original || '').toLowerCase();
+        return palabrasClaveLOTR.some(keyword =>
+          nombre.includes(keyword) || nombreOriginal.includes(keyword)
+        );
+      }).length;
+    },
+    color: 'bg-indigo-50 text-indigo-800 border-indigo-200'
+  },
+  {
+    id: 'harry_potter_fan',
+    nombre: 'Fanático de Harry Potter',
+    descripcion: 'Ve 7 películas de Harry Potter',
+    emoji: '⚡',
+    categoria: CATEGORIAS_LOGROS.ESPECIALES,
+    condicion: (stats) => {
+      if (!stats.peliculasVistas || !Array.isArray(stats.peliculasVistas)) return 0;
+
+      const palabrasClaveHP = [
+        'harry potter',
+        'la piedra filosofal',
+        'la cámara secreta',
+        'el prisionero de azkaban',
+        'el cáliz de fuego',
+        'la orden del fénix',
+        'el misterio del príncipe',
+        'las reliquias de la muerte'
+      ];
+
+      return stats.peliculasVistas.filter(pelicula => {
+        const nombre = (pelicula.nombre || '').toLowerCase();
+        const nombreOriginal = (pelicula.nombre_original || '').toLowerCase();
+        return palabrasClaveHP.some(keyword =>
+          nombre.includes(keyword) || nombreOriginal.includes(keyword)
+        );
+      }).length;
+    },
+    color: 'bg-red-50 text-red-800 border-red-200'
+  },
+  {
+    id: 'fantastic_beasts_fan',
+    nombre: 'Magizoologista',
+    descripcion: 'Ve las 3 películas de Animales Fantásticos',
+    emoji: '🦄',
+    categoria: CATEGORIAS_LOGROS.ESPECIALES,
+    condicion: (stats) => {
+      if (!stats.peliculasVistas || !Array.isArray(stats.peliculasVistas)) return 0;
+
+      const palabrasClaveFB = [
+        'animales fantásticos',
+        'fantastic beasts'
+      ];
+
+      const peliculasFB = stats.peliculasVistas.filter(pelicula => {
+        const nombre = (pelicula.nombre || '').toLowerCase();
+        const nombreOriginal = (pelicula.nombre_original || '').toLowerCase();
+        return palabrasClaveFB.some(keyword =>
+          nombre.includes(keyword) || nombreOriginal.includes(keyword)
+        );
+      });
+
+      return peliculasFB.length >= 3;
+    },
+    color: 'bg-teal-50 text-teal-800 border-teal-200'
+  },
 
 ];
 
@@ -562,6 +752,71 @@ function calcularProgresoLogro(logro, stats) {
         }).length;
       })(),
       objetivo: 6
+    },
+    'mutante': {
+      actual: (() => {
+        if (!stats.peliculasVistas && !stats.seriesVistas) {
+          return 0;
+        }
+        
+        // Unifica películas y series vistas
+        const titulos = [
+          ...(stats.peliculasVistas || []),
+          ...(stats.seriesVistas || [])
+        ];
+
+        // Palabras clave para X-Men
+        const palabrasClaveXmen = [
+          'x-men', 'wolverine', 'logan', 'new mutants', 'deadpool'
+        ];
+
+        const titulosXmen = titulos.filter(titulo => {
+          const nombre = (titulo.nombre || '').toLowerCase();
+          const nombreOriginal = (titulo.nombre_original || '').toLowerCase();
+          return palabrasClaveXmen.some(keyword =>
+            nombre.includes(keyword) || nombreOriginal.includes(keyword)
+          );
+        });
+
+        return titulosXmen.length;
+      })(),
+      objetivo: 5
+    },
+    'hulk_fan': {
+      actual: (() => {
+        if (!stats.peliculasVistas || !Array.isArray(stats.peliculasVistas)) return 0;
+
+        const palabrasClaveHulk = [
+          'hulk', 'incredible hulk', 'el increíble hulk', 'the incredible hulk'
+        ];
+
+        return stats.peliculasVistas.filter(pelicula => {
+          const nombre = (pelicula.nombre || '').toLowerCase();
+          const nombreOriginal = (pelicula.nombre_original || '').toLowerCase();
+          return palabrasClaveHulk.some(keyword =>
+            nombre.includes(keyword) || nombreOriginal.includes(keyword)
+          );
+        }).length;
+      })(),
+      objetivo: 3
+    },
+    'antman_fan': {
+      actual: (() => {
+        if (!stats.peliculasVistas || !Array.isArray(stats.peliculasVistas)) return 0;
+
+        const palabrasClaveAntman = [
+          'ant-man', 'ant man', 'antman'
+        ];
+
+        return stats.peliculasVistas.filter(pelicula => {
+          const nombre = (pelicula.nombre || '').toLowerCase();
+          const nombreOriginal = (pelicula.nombre_original || '').toLowerCase();
+          return palabrasClaveAntman.some(keyword =>
+            nombre.includes(keyword) || nombreOriginal.includes(keyword)
+          );
+        }).length;
+      })(),
+      objetivo: 2
     }
   };
 
