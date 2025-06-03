@@ -436,6 +436,211 @@ export const LOGROS_DEFINICIONES = [
     },
     color: 'bg-blue-50 text-blue-800 border-blue-200'
   },
+  {
+    id: 'fantastic_beasts_fan',
+    nombre: 'Magizoólogo',
+    descripcion: 'Ve 3 películas de Animales Fantásticos',
+    emoji: '🦄',
+    categoria: CATEGORIAS_LOGROS.ESPECIALES,
+    condicion: (stats) => {
+      if (!stats.peliculasVistas || !Array.isArray(stats.peliculasVistas)) return 0;
+
+      const palabrasClaveFB = [
+        'animales fantásticos',
+        'fantastic beasts'
+      ];
+
+      return stats.peliculasVistas.filter(pelicula => {
+        const nombre = (pelicula.nombre || '').toLowerCase();
+        const nombreOriginal = (pelicula.nombre_original || '').toLowerCase();
+        return palabrasClaveFB.some(keyword =>
+          nombre.includes(keyword) || nombreOriginal.includes(keyword)
+        );
+      }).length;
+    },
+    color: 'bg-green-50 text-green-800 border-green-200'
+  },
+  {
+    id: 'harry_potter_fan',
+    nombre: 'Magizoólogo',
+    descripcion: 'Ve 7 películas de Harry Potter',
+    emoji: '🧙‍♂️',
+    categoria: CATEGORIAS_LOGROS.ESPECIALES,
+    condicion: (stats) => {
+      if (!stats.peliculasVistas || !Array.isArray(stats.peliculasVistas)) return 0;
+
+      const palabrasClaveHP = [
+        'harry potter',
+        'la piedra filosofal',
+        'la cámara secreta',
+        'el prisionero de azkaban',
+        'el cáliz de fuego',
+        'la orden del fénix',
+        'el misterio del príncipe',
+        'las reliquias de la muerte'
+      ];
+
+      return stats.peliculasVistas.filter(pelicula => {
+        const nombre = (pelicula.nombre || '').toLowerCase();
+        const nombreOriginal = (pelicula.nombre_original || '').toLowerCase();
+        return palabrasClaveHP.some(keyword =>
+          nombre.includes(keyword) || nombreOriginal.includes(keyword)
+        );
+      }).length;
+    },
+    color: 'bg-green-50 text-green-800 border-green-200'
+  },
+  {
+    id: 'lotr_fan',
+    nombre: 'El portador del Anillo',
+    descripcion: 'Ve 3 películas de El Señor de los Anillos',
+    emoji: '💍',
+    categoria: CATEGORIAS_LOGROS.ESPECIALES,
+    condicion: (stats) => {
+      if (!stats.peliculasVistas || !Array.isArray(stats.peliculasVistas)) return 0;
+
+      const palabrasClaveLOTR = [
+        'el señor de los anillos',
+        'the lord of the rings',
+        'lotr'
+      ];
+
+      return stats.peliculasVistas.filter(pelicula => {
+        const nombre = (pelicula.nombre || '').toLowerCase();
+        const nombreOriginal = (pelicula.nombre_original || '').toLowerCase();
+        return palabrasClaveLOTR.some(keyword =>
+          nombre.includes(keyword) || nombreOriginal.includes(keyword)
+        );
+      }).length;
+    },
+    color: 'bg-green-50 text-green-800 border-green-200'
+  },
+  {
+    id: 'flash_fan',
+    nombre: 'Velocista',
+    descripcion: 'Ve 3 películas o series de Flash',
+    emoji: '⚡',
+    categoria: CATEGORIAS_LOGROS.ESPECIALES,
+    condicion: (stats) => {
+      if (
+        (!stats.peliculasVistas || !Array.isArray(stats.peliculasVistas)) &&
+        (!stats.seriesVistas || !Array.isArray(stats.seriesVistas))
+      ) return 0;
+
+      const titulos = [
+        ...(stats.peliculasVistas || []),
+        ...(stats.seriesVistas || [])
+      ];
+
+      const palabrasClaveFlash = [
+        'flash', 'the flash'
+      ];
+
+      return titulos.filter(titulo => {
+        const nombre = (titulo.nombre || '').toLowerCase();
+        const nombreOriginal = (titulo.nombre_original || '').toLowerCase();
+        return palabrasClaveFlash.some(keyword =>
+          nombre.includes(keyword) || nombreOriginal.includes(keyword)
+        );
+      }).length;
+    },
+    color: 'bg-green-50 text-green-800 border-green-200'
+  },
+  {
+    id: 'antman_fan',
+    nombre: 'Ant-Man Fan',
+    descripcion: 'Ve 2 películas de Ant-Man',
+    emoji: '🐜',
+    categoria: CATEGORIAS_LOGROS.ESPECIALES,
+    condicion: (stats) => {
+      if (!stats.peliculasVistas || !Array.isArray(stats.peliculasVistas)) return 0;
+
+      const palabrasClaveAntman = [
+        'ant-man', 'ant man', 'antman'
+      ];
+
+      return stats.peliculasVistas.filter(pelicula => {
+        const nombre = (pelicula.nombre || '').toLowerCase();
+        const nombreOriginal = (pelicula.nombre_original || '').toLowerCase();
+        return palabrasClaveAntman.some(keyword =>
+          nombre.includes(keyword) || nombreOriginal.includes(keyword)
+        );
+      }).length;
+    },
+    color: 'bg-green-50 text-green-800 border-green-200'
+  },
+  {
+    id: 'mutante',
+    nombre: 'Mutante',
+    descripcion: 'Ve 5 películas o series de X-Men',
+    emoji: '🧬',
+    categoria: CATEGORIAS_LOGROS.ESPECIALES,
+    condicion: (stats) => {
+      const peliculas = stats.peliculasVistas || [];
+      const series = stats.seriesVistas || [];
+      const titulos = [...peliculas, ...series];
+      const palabrasClaveXmen = [
+        'x-men', 'wolverine', 'logan', 'new mutants', 'deadpool'
+      ];
+      return titulos.filter(titulo => {
+        const nombre = (titulo.nombre || '').toLowerCase();
+        const nombreOriginal = (titulo.nombre_original || '').toLowerCase();
+        return palabrasClaveXmen.some(keyword =>
+          nombre.includes(keyword) || nombreOriginal.includes(keyword)
+        );
+      }).length >= 5;
+    },
+    color: 'bg-green-50 text-green-800 border-green-200'
+  },
+  {
+    id: 'hobbit_fan',
+    nombre: 'Aventurero de la Comarca',
+    descripcion: 'Ve las 3 películas de El Hobbit',
+    emoji: '🧙',
+    categoria: CATEGORIAS_LOGROS.ESPECIALES,
+    condicion: (stats) => {
+      if (!stats.peliculasVistas || !Array.isArray(stats.peliculasVistas)) return 0;
+
+      const palabrasClaveHobbit = [
+        'el hobbit',
+        'the hobbit'
+      ];
+
+      return stats.peliculasVistas.filter(pelicula => {
+        const nombre = (pelicula.nombre || '').toLowerCase();
+        const nombreOriginal = (pelicula.nombre_original || '').toLowerCase();
+        return palabrasClaveHobbit.some(keyword =>
+          nombre.includes(keyword) || nombreOriginal.includes(keyword)
+        );
+      }).length >= 3;
+    },
+    color: 'bg-yellow-50 text-yellow-800 border-yellow-200'
+  },
+  {
+    id: 'spiderman_fan',
+    nombre: 'Amigable Vecino',
+    descripcion: 'Ve al menos 3 películas de Spider-Man',
+    emoji: '🕷️',
+    categoria: CATEGORIAS_LOGROS.ESPECIALES,
+    condicion: (stats) => {
+      if (!stats.peliculasVistas || !Array.isArray(stats.peliculasVistas)) return 0;
+
+      const palabrasClaveSpiderman = [
+        'spider-man',
+        'spiderman',
+        'el hombre araña'
+      ];
+
+      return stats.peliculasVistas.filter(pelicula => {
+        const nombre = (pelicula.nombre || '').toLowerCase();
+        const nombreOriginal = (pelicula.nombre_original || '').toLowerCase();
+        return palabrasClaveSpiderman.some(keyword =>
+          nombre.includes(keyword) || nombreOriginal.includes(keyword)
+        );
+      }).length >= 3;
+    },
+    color: 'bg-red-50 text-red-800 border-red-200'
+  }
 
 ];
 
@@ -597,6 +802,50 @@ function calcularProgresoLogro(logro, stats) {
         }).length;
       })(),
       objetivo: 6
+    },
+    'fantastic_beasts_fan': {
+      actual: (() => {
+        if (!stats.peliculasVistas || !Array.isArray(stats.peliculasVistas)) return 0;
+
+        const palabrasClaveFB = [
+          'animales fantásticos',
+          'fantastic beasts'
+        ];
+
+        return stats.peliculasVistas.filter(pelicula => {
+          const nombre = (pelicula.nombre || '').toLowerCase();
+          const nombreOriginal = (pelicula.nombre_original || '').toLowerCase();
+          return palabrasClaveFB.some(keyword =>
+            nombre.includes(keyword) || nombreOriginal.includes(keyword)
+          );
+        }).length;
+      })(),
+      objetivo: 3
+    },
+    'harry_potter_fan': {
+      actual: (() => {
+        if (!stats.peliculasVistas || !Array.isArray(stats.peliculasVistas)) return 0;
+
+        const palabrasClaveHP = [
+          'harry potter',
+          'la piedra filosofal',
+          'la cámara secreta',
+          'el prisionero de azkaban',
+          'el cáliz de fuego',
+          'la orden del fénix',
+          'el misterio del príncipe',
+          'las reliquias de la muerte'
+        ];
+
+        return stats.peliculasVistas.filter(pelicula => {
+          const nombre = (pelicula.nombre || '').toLowerCase();
+          const nombreOriginal = (pelicula.nombre_original || '').toLowerCase();
+          return palabrasClaveHP.some(keyword =>
+            nombre.includes(keyword) || nombreOriginal.includes(keyword)
+          );
+        }).length;
+      })(),
+      objetivo: 7
     }
   };
 
