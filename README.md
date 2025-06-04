@@ -39,6 +39,7 @@ npm run lint      # Linting del código
     npm install @hookform/resolvers
     npm install zod
     npm install prop-types
+    npm install -g supabase
 
 ```
 
