@@ -1,37 +1,58 @@
-
 import { serve } from "std/server";
 import { createClient } from "@supabase/supabase-js";
 
-console.log("Hello from Functions!")
-
 serve(async (req) => {
+  // Inicializa el cliente de Supabase con las variables de entorno
   const supabase = createClient(
-  Deno.env.get("SUPABASE_URL")!,
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   );
 
   // 1. Obtener usuarios PRO
-  const { data: usuariosPro, error } = await supabase
+  const { data: usuariosPro, error: errorUsuarios } = await supabase
     .from("usuarios")
     .select("user_id, email")
     .eq("plan", "pro");
 
-  if (error) {
+  if (errorUsuarios) {
+    console.error("Error obteniendo usuarios PRO:", errorUsuarios);
     return new Response("Error obteniendo usuarios PRO", { status: 500 });
   }
 
+  let notificados = 0;
+
   // 2. Para cada usuario PRO, buscar novedades y enviar notificación
   for (const usuario of usuariosPro || []) {
-    // Aquí deberías buscar si hay novedades para el usuario
-    // Ejemplo: const novedades = await buscarNovedadesParaUsuario(usuario.user_id);
+    // Ejemplo: buscar series seguidas por el usuario
+    const { data: seriesSeguidas, error: errorSeries } = await supabase
+      .from("series_seguidas")
+      .select("serie_id")
+      .eq("user_id", usuario.user_id);
 
-    // Si hay novedades, envía email o push (esto es solo un ejemplo)
-    // await enviarEmail(usuario.email, novedades);
-    // await enviarPush(usuario.user_id, novedades);
+    if (errorSeries) {
+      console.error(`Error obteniendo series para usuario ${usuario.user_id}:`, errorSeries);
+      continue;
+    }
+
+    // Aquí deberías buscar novedades reales (nuevas temporadas/episodios)
+    // Por ejemplo, podrías consultar una tabla de novedades o comparar fechas
+
+    // Simulación: Si el usuario sigue al menos una serie, lo notificamos
+    if (seriesSeguidas && seriesSeguidas.length > 0) {
+      // Aquí iría la lógica real de envío de email o push
+      // await enviarEmail(usuario.email, novedades);
+      // await enviarPush(usuario.user_id, novedades);
+
+      console.log(`Notificar a ${usuario.email} sobre novedades en sus series.`);
+      notificados++;
+    }
   }
 
-  return new Response("Notificaciones procesadas", { status: 200 });
-})
+  return new Response(
+    `Notificaciones procesadas. Usuarios notificados: ${notificados}`,
+    { status: 200 }
+  );
+});
 
 /* To invoke locally:
 
