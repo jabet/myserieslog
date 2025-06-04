@@ -14,6 +14,7 @@ import {
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import MensajeFlotante from "../components/MensajeFlotante";
+import AdminEnviarNotificacion from "../components/admin/AdminEnviarNotificacion";
 
 import { guardarContenidoTMDb } from "../utils/guardarContenidoTMDb";
 import useUsuario from "../hooks/useUsuario"; // <-- Importa el hook correctamente
@@ -62,6 +63,13 @@ export default function AdminPanel() {
 
   // Estado para logs de migración
   const [logsMigracion, setLogsMigracion] = useState([]);
+
+  // Estado para el formulario de notificación
+  const [notiUserId, setNotiUserId] = useState("");
+  const [notiTitulo, setNotiTitulo] = useState("");
+  const [notiMensaje, setNotiMensaje] = useState("");
+  const [notiUrl, setNotiUrl] = useState("");
+  const [notiStatus, setNotiStatus] = useState("");
 
   // 1) Cargar lista de contenidos
   useEffect(() => {
@@ -117,8 +125,8 @@ export default function AdminPanel() {
 
     supabase
       .from("usuarios")
-      .select("user_id, rol") // <-- created_at eliminado aquí
-      .order(orden, { ascending: sortDir === "asc" })
+      .select("user_id, rol")
+      .order("user_id", { ascending: true })
       .then(({ data, error }) => {
         if (error) {
           console.error("Error al cargar usuarios:", error);
@@ -456,6 +464,39 @@ export default function AdminPanel() {
     }
     mostrarMensaje("Tipos recalculados");
   };
+
+  // Función para enviar la notificación
+  const enviarNotificacion = async (e) => {
+    e.preventDefault();
+    if (!notiUserId) {
+      setNotiStatus("Debes seleccionar un usuario.");
+      return;
+    }
+    setNotiStatus("Enviando...");
+    const { error } = await supabase.from("notificaciones_usuario").insert([
+      {
+        user_id: notiUserId,
+        titulo: notiTitulo,
+        mensaje: notiMensaje,
+        url: notiUrl,
+      },
+    ]);
+    if (error) {
+      setNotiStatus("Error al enviar: " + error.message);
+    } else {
+      setNotiStatus("¡Notificación enviada!");
+      setNotiTitulo("");
+      setNotiMensaje("");
+      setNotiUrl("");
+    }
+  };
+
+  // Añade esto después de cargar usuarios:
+  const userOptions = usuarios.map((u) => (
+    <option key={u.user_id} value={u.user_id}>
+      {u.nick ? u.nick : u.user_id} {u.rol ? `(${u.rol})` : ""}
+    </option>
+  ));
 
   return (
     <>
@@ -1136,6 +1177,13 @@ export default function AdminPanel() {
             ))}
           </div>
         )}
+
+        <AdminEnviarNotificacion
+          usuarios={usuarios}
+          onNotificacionEnviada={() => {
+            window.dispatchEvent(new Event("notificacion-enviada"));
+          }}
+        />
       </main>
       <Footer />
     </>

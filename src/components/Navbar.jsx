@@ -5,6 +5,7 @@ import { supabase } from "../utils/supabaseClient";
 import Buscador from "./Buscador";
 import useUsuario from "../hooks/useUsuario";
 import React from "react";
+import NotificacionesBell from "./NotificacionesBell";
 
 export default function Navbar() {
   const { usuario, perfil, esAdmin, loading } = useUsuario();
@@ -66,6 +67,10 @@ export default function Navbar() {
               <Link to="/social" className="text-sm hover:underline">
                 Social
               </Link>
+              {/* Notifications button */}
+              <div className="relative">
+                <NotificacionesBell usuario={usuario} />
+              </div>
               {esAdmin && (
                 <Link to="/admin" className="text-sm hover:underline">
                   Admin
@@ -114,6 +119,10 @@ export default function Navbar() {
                 <Link to="/social" onClick={() => setMenuOpen(false)}>
                   Social
                 </Link>
+                {/* Notifications button */}
+                <div className="relative">
+                  <NotificacionesBell usuario={usuario} />
+                </div>
               </li>
               {esAdmin && (
                 <li>
