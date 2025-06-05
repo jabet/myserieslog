@@ -1180,6 +1180,9 @@ export default function AdminPanel() {
 
         <AdminEnviarNotificacion
           usuarios={usuarios}
+          series={contenidos.filter(
+            (c) => c.tipo === "serie" || c.media_type === "tv"
+          )}
           onNotificacionEnviada={() => {
             window.dispatchEvent(new Event("notificacion-enviada"));
           }}

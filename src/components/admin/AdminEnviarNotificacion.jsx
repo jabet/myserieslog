@@ -1,11 +1,16 @@
 import { useState } from "react";
 import { supabase } from "../../utils/supabaseClient";
 
-export default function AdminEnviarNotificacion({ usuarios, onNotificacionEnviada }) {
+export default function AdminEnviarNotificacion({
+  usuarios,
+  onNotificacionEnviada,
+  series = [],
+}) {
   const [notiUserId, setNotiUserId] = useState("");
   const [notiTitulo, setNotiTitulo] = useState("");
   const [notiMensaje, setNotiMensaje] = useState("");
   const [notiUrl, setNotiUrl] = useState("");
+  const [notiSerieId, setNotiSerieId] = useState("");
   const [notiStatus, setNotiStatus] = useState("");
 
   const userOptions = usuarios.map((u) => (
@@ -14,6 +19,17 @@ export default function AdminEnviarNotificacion({ usuarios, onNotificacionEnviad
     </option>
   ));
 
+  const serieOptions = [
+    <option key="" value="">
+      Sin imagen de serie
+    </option>,
+    ...series.map((s) => (
+      <option key={s.id} value={s.id}>
+        {s.nombre} ({s.id})
+      </option>
+    )),
+  ];
+
   const enviarNotificacion = async (e) => {
     e.preventDefault();
     if (!notiUserId) {
@@ -21,16 +37,23 @@ export default function AdminEnviarNotificacion({ usuarios, onNotificacionEnviad
       return;
     }
     setNotiStatus("Enviando...");
-    const { error } = await supabase
-      .from("notificaciones_usuario")
-      .insert([
-        {
-          user_id: notiUserId,
-          titulo: notiTitulo,
-          mensaje: notiMensaje,
-          url: notiUrl,
-        },
-      ]);
+
+    let imagen = null;
+    if (notiSerieId) {
+      // Busca la serie seleccionada y usa su imagen
+      const serie = series.find((s) => s.id === notiSerieId);
+      imagen = serie?.imagen || null;
+    }
+
+    const { error } = await supabase.from("notificaciones_usuario").insert([
+      {
+        user_id: notiUserId,
+        titulo: notiTitulo,
+        mensaje: notiMensaje,
+        url: notiUrl,
+        imagen,
+      },
+    ]);
     if (error) {
       setNotiStatus("Error al enviar: " + error.message);
     } else {
@@ -39,6 +62,7 @@ export default function AdminEnviarNotificacion({ usuarios, onNotificacionEnviad
       setNotiMensaje("");
       setNotiUrl("");
       setNotiUserId("");
+      setNotiSerieId("");
       if (onNotificacionEnviada) onNotificacionEnviada();
     }
   };
@@ -79,6 +103,13 @@ export default function AdminEnviarNotificacion({ usuarios, onNotificacionEnviad
           onChange={(e) => setNotiUrl(e.target.value)}
           className="border px-2 py-1 rounded"
         />
+        <select
+          value={notiSerieId}
+          onChange={(e) => setNotiSerieId(e.target.value)}
+          className="border px-2 py-1 rounded"
+        >
+          {serieOptions}
+        </select>
         <button
           type="submit"
           className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"

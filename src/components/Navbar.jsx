@@ -6,6 +6,7 @@ import Buscador from "./Buscador";
 import useUsuario from "../hooks/useUsuario";
 import React from "react";
 import NotificacionesBell from "./NotificacionesBell";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 
 export default function Navbar() {
   const { usuario, perfil, esAdmin, loading } = useUsuario();
@@ -50,35 +51,73 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Desktop links and search */}
+        {/* Desktop links and user dropdown */}
         <div className="hidden md:flex items-center gap-4">
           <div className="w-64">
             <Buscador />
           </div>
           {usuario ? (
             <>
-              <Link to="/perfil" className="text-sm hover:underline ">
-                {" "}
-                Hola{perfil?.nick ? `, ${perfil.nick}` : ""} 👋
-              </Link>
-              <Link to="/preferencias" className="text-sm hover:underline">
-                Preferencias
-              </Link>
-              <Link to="/social" className="text-sm hover:underline">
-                Social
-              </Link>
-              {/* Notifications button */}
+              <DropdownMenu.Root>
+                <DropdownMenu.Trigger asChild>
+                  <button className="text-sm hover:underline flex items-center gap-1 font-medium">
+                    {perfil?.nick ? `Hola, ${perfil.nick}` : "Mi cuenta"} ▼
+                  </button>
+                </DropdownMenu.Trigger>
+                <DropdownMenu.Portal>
+                  <DropdownMenu.Content
+                    sideOffset={8}
+                    className="min-w-[180px] bg-white rounded shadow-lg py-2 text-gray-900 z-50"
+                  >
+                    <DropdownMenu.Item asChild>
+                      <Link
+                        to="/perfil"
+                        className="block px-4 py-2 hover:bg-sky-100"
+                      >
+                        Perfil
+                      </Link>
+                    </DropdownMenu.Item>
+                    <DropdownMenu.Item asChild>
+                      <Link
+                        to="/opciones"
+                        className="block px-4 py-2 hover:bg-sky-100"
+                      >
+                        Opciones
+                      </Link>
+                    </DropdownMenu.Item>
+                    <DropdownMenu.Item asChild>
+                      <Link
+                        to="/social"
+                        className="block px-4 py-2 hover:bg-sky-100"
+                      >
+                        Social
+                      </Link>
+                    </DropdownMenu.Item>
+                    {esAdmin && (
+                      <DropdownMenu.Item asChild>
+                        <Link
+                          to="/admin"
+                          className="block px-4 py-2 hover:bg-sky-100"
+                        >
+                          Admin
+                        </Link>
+                      </DropdownMenu.Item>
+                    )}
+                    <DropdownMenu.Separator className="my-1 h-px bg-gray-200" />
+                    <DropdownMenu.Item asChild>
+                      <button
+                        onClick={cerrarSesion}
+                        className="block w-full text-left px-4 py-2 hover:bg-sky-100"
+                      >
+                        Cerrar sesión
+                      </button>
+                    </DropdownMenu.Item>
+                  </DropdownMenu.Content>
+                </DropdownMenu.Portal>
+              </DropdownMenu.Root>
               <div className="relative">
                 <NotificacionesBell usuario={usuario} />
               </div>
-              {esAdmin && (
-                <Link to="/admin" className="text-sm hover:underline">
-                  Admin
-                </Link>
-              )}
-              <button onClick={cerrarSesion} className="text-sm">
-                Cerrar sesión
-              </button>
             </>
           ) : (
             <Link to="/login" className="text-sm hover:underline">
@@ -108,37 +147,81 @@ export default function Navbar() {
               Inicio
             </Link>
           </li>
-          {usuario && (
+          {usuario ? (
             <>
               <li>
-                <Link to="/preferencias" onClick={() => setMenuOpen(false)}>
-                  Preferencias
-                </Link>
+                <DropdownMenu.Root>
+                  <DropdownMenu.Trigger asChild>
+                    <button className="text-sm hover:underline flex items-center gap-1 font-medium w-full text-left">
+                      {perfil?.nick ? `Hola, ${perfil.nick}` : "Mi cuenta"} ▼
+                    </button>
+                  </DropdownMenu.Trigger>
+                  <DropdownMenu.Portal>
+                    <DropdownMenu.Content
+                      sideOffset={8}
+                      className="min-w-[180px] bg-white rounded shadow-lg py-2 text-gray-900 z-50"
+                    >
+                      <DropdownMenu.Item asChild>
+                        <Link
+                          to="/perfil"
+                          className="block px-4 py-2 hover:bg-sky-100"
+                          onClick={() => setMenuOpen(false)}
+                        >
+                          Perfil
+                        </Link>
+                      </DropdownMenu.Item>
+                      <DropdownMenu.Item asChild>
+                        <Link
+                          to="/opciones"
+                          className="block px-4 py-2 hover:bg-sky-100"
+                          onClick={() => setMenuOpen(false)}
+                        >
+                          Opciones
+                        </Link>
+                      </DropdownMenu.Item>
+                      <DropdownMenu.Item asChild>
+                        <Link
+                          to="/social"
+                          className="block px-4 py-2 hover:bg-sky-100"
+                          onClick={() => setMenuOpen(false)}
+                        >
+                          Social
+                        </Link>
+                      </DropdownMenu.Item>
+                      {esAdmin && (
+                        <DropdownMenu.Item asChild>
+                          <Link
+                            to="/admin"
+                            className="block px-4 py-2 hover:bg-sky-100"
+                            onClick={() => setMenuOpen(false)}
+                          >
+                            Admin
+                          </Link>
+                        </DropdownMenu.Item>
+                      )}
+                      <DropdownMenu.Separator className="my-1 h-px bg-gray-200" />
+                      <DropdownMenu.Item asChild>
+                        <button
+                          onClick={() => {
+                            setMenuOpen(false);
+                            cerrarSesion();
+                          }}
+                          className="block w-full text-left px-4 py-2 hover:bg-sky-100"
+                        >
+                          Cerrar sesión
+                        </button>
+                      </DropdownMenu.Item>
+                    </DropdownMenu.Content>
+                  </DropdownMenu.Portal>
+                </DropdownMenu.Root>
               </li>
               <li>
-                <Link to="/social" onClick={() => setMenuOpen(false)}>
-                  Social
-                </Link>
-                {/* Notifications button */}
                 <div className="relative">
                   <NotificacionesBell usuario={usuario} />
                 </div>
               </li>
-              {esAdmin && (
-                <li>
-                  <Link to="/admin" className="text-sm hover:underline">
-                    Admin
-                  </Link>
-                </li>
-              )}
-              <li>
-                <button onClick={cerrarSesion} className="w-full text-left">
-                  Cerrar sesión
-                </button>
-              </li>
             </>
-          )}
-          {!usuario && (
+          ) : (
             <li>
               <Link to="/login" onClick={() => setMenuOpen(false)}>
                 Iniciar sesión
