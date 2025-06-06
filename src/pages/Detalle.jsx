@@ -13,13 +13,13 @@ import useTMDBDetalle from "../hooks/useTMDBDetalle";
 import SelectorPlataformas from "../components/SelectorPlataformas";
 import { IconosPlataformas } from "../components/IconosPlataformas";
 import { PLATAFORMAS_DISPONIBLES } from "../constants/plataformas";
-import { actualizarProximoEpisodio } from "../utils/calcularProximoEpisodio";
-import { cargarTemporadasCapitulos } from "../utils/cargarTemporadasCapitulos";
-import { fetchTMDbContent, parseTMDbContent } from "../utils/tmdb";
 import { guardarContenidoTMDb } from "../utils/guardarContenidoTMDb";
 import { LIMITES_PLAN } from "../constants/planes";
 import useCatalogoUsuario from "../hooks/useCatalogoUsuario";
 import AvisoLimitePlan from "../components/AvisoLimitePlan";
+import { obtenerLogrosRecientes } from "../utils/logros";
+import { notificarLogroDesbloqueado } from "../utils/notificaciones";
+import PuntuacionTMDb from "../components/PuntuacionTMDb";
 
 export default function Detalle() {
   const { media_type, id } = useParams();
@@ -130,6 +130,48 @@ export default function Detalle() {
     setTimeout(() => setMensaje(""), 3000);
   };
 
+  if (!item) {
+    return (
+      <>
+        <MensajeFlotante texto="Cargando detalle…" />
+        <p className="pt-20 p-4 text-center">Cargando detalle…</p>
+      </>
+    );
+  }
+
+  const seriesEnCatalogo = catalogo.filter((c) => c.media_type === "tv").length;
+  const peliculasEnCatalogo = catalogo.filter(
+    (c) => c.media_type === "movie"
+  ).length;
+  const esSerie = item.media_type === "tv";
+  const esPelicula = item.media_type === "movie";
+  const limiteAlcanzado =
+    (esSerie && seriesEnCatalogo >= LIMITES_PLAN[plan]?.series) ||
+    (esPelicula && peliculasEnCatalogo >= LIMITES_PLAN[plan]?.peliculas);
+
+  // --- NUEVO: Cálculo y notificación de logros al añadir al catálogo ---
+  const obtenerStats = async () => {
+    // Aquí deberías obtener las estadísticas del usuario igual que en Perfil.jsx
+    // Por ejemplo, contando series, películas, episodios vistos, etc.
+    // Este es un ejemplo básico:
+    const { data: seriesData } = await supabase
+      .from("catalogo_usuario")
+      .select("id")
+      .eq("user_id", usuario.id)
+      .eq("estado", "viendo");
+    const { data: peliculasData } = await supabase
+      .from("catalogo_usuario")
+      .select("id")
+      .eq("user_id", usuario.id)
+      .eq("estado", "pendiente");
+    // ...añade más stats según tus logros...
+    return {
+      series: { total: seriesData?.length || 0 },
+      peliculas: { total: peliculasData?.length || 0 },
+      // ...otros stats...
+    };
+  };
+
   const toggleCatalogo = async () => {
     if (!usuario || !item) {
       mostrar("Inicia sesión para gestionar tu catálogo");
@@ -162,6 +204,9 @@ export default function Detalle() {
         await guardarContenidoTMDb(id, media_type, "es-ES");
       }
 
+      // 1. Obtener stats antes de añadir
+      const estadisticasAntes = await obtenerStats();
+
       await supabase.from("catalogo_usuario").insert([
         {
           user_id: usuario.id,
@@ -171,6 +216,16 @@ export default function Detalle() {
           estado: "pendiente",
         },
       ]);
+
+      // 2. Obtener stats después de añadir
+      const estadisticasAhora = await obtenerStats();
+
+      // 3. Calcular logros recién desbloqueados
+      const nuevosLogros = obtenerLogrosRecientes(estadisticasAntes, estadisticasAhora);
+      for (const logro of nuevosLogros) {
+        await notificarLogroDesbloqueado(usuario.id, logro);
+      }
+
       setEnCatalogo(true);
       setEstadoCatalogo({
         estado: "pendiente",
@@ -200,8 +255,8 @@ export default function Detalle() {
       nuevo === "pendiente"
         ? "Añadida a “Lo quiero ver”"
         : nuevo === "viendo"
-          ? "Estado cambiado a “Viéndola”"
-          : "Marcada como “Ya la vi”"
+        ? "Estado cambiado a “Viéndola”"
+        : "Marcada como “Ya la vi”"
     );
   };
 
@@ -225,161 +280,152 @@ export default function Detalle() {
     mostrar(nuevo ? "Añadido a favoritos" : "Eliminado de favoritos");
   };
 
-  // --- Lógica de límites por plan ---
-  if (!item) {
-    return (
-      <>
-        <MensajeFlotante texto="Cargando detalle…" />
-        <p className="pt-20 p-4 text-center">Cargando detalle…</p>
-      </>
-    );
-  }
+  const cambiarPuntuacion = async (nueva) => {
+    if (!usuario || !enCatalogo) {
+      mostrar("Añade primero al catálogo para puntuar");
+      return;
+    }
+    await supabase
+      .from("catalogo_usuario")
+      .update({ puntuacion: nueva })
+      .eq("user_id", usuario.id)
+      .eq("contenido_id", item.id);
+    setEstadoCatalogo((prev) => ({ ...prev, puntuacion: nueva }));
+    mostrar(`Puntuación guardada: ${nueva} / 5`);
+  };
 
-  const seriesEnCatalogo = catalogo.filter((c) => c.media_type === "tv").length;
-  const peliculasEnCatalogo = catalogo.filter(
-    (c) => c.media_type === "movie"
-  ).length;
-  const esSerie = item.media_type === "tv";
-  const esPelicula = item.media_type === "movie";
-  const limiteAlcanzado =
-    (esSerie && seriesEnCatalogo >= LIMITES_PLAN[plan]?.series) ||
-    (esPelicula && peliculasEnCatalogo >= LIMITES_PLAN[plan]?.peliculas);
-  console.log("Plan del usuario:", plan);
+  // --- DISEÑO MEJORADO ---
   return (
     <>
       <Navbar />
-
-      <main className="pt-20 px-4 max-w-4xl mx-auto">
-        <div className="flex items-center gap-2 mb-4">
-          <h1 className="text-3xl font-bold">{item.nombre}</h1>
-          {enCatalogo && (
-            <button
-              onClick={toggleFavorito}
-              className="ml-2"
-              aria-label={
-                favorito ? "Quitar de favoritos" : "Añadir a favoritos"
-              }
-            >
-              {favorito ? (
-                <StarFilledIcon className="w-6 h-6 text-yellow-500" />
-              ) : (
-                <StarIcon className="w-6 h-6 text-gray-500" />
-              )}
-            </button>
+      <main className="pt-24 px-4 max-w-4xl mx-auto">
+        <div className="flex flex-col md:flex-row gap-8 bg-white rounded-xl shadow-lg p-6 mb-8">
+          {item.imagen && (
+            <img
+              src={item.imagen}
+              alt={item.nombre}
+              className="w-64 h-96 object-cover rounded-lg shadow-md mx-auto md:mx-0"
+            />
           )}
+          <div className="flex-1 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <h1 className="text-3xl font-bold">{item.nombre}</h1>
+                {enCatalogo && (
+                  <button
+                    onClick={toggleFavorito}
+                    className="ml-2"
+                    aria-label={favorito ? "Quitar de favoritos" : "Añadir a favoritos"}
+                  >
+                    {favorito ? (
+                      <StarFilledIcon className="w-7 h-7 text-yellow-500" />
+                    ) : (
+                      <StarIcon className="w-7 h-7 text-gray-400" />
+                    )}
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-4 mb-4 text-gray-700 text-sm">
+                <span className="bg-gray-100 px-3 py-1 rounded-full">
+                  <strong>Año:</strong> {item.anio || "Desconocido"}
+                </span>
+                <span className="bg-gray-100 px-3 py-1 rounded-full">
+                  <strong>Tipo:</strong>{" "}
+                  {item.media_type === "tv"
+                    ? "Serie"
+                    : item.media_type === "movie"
+                    ? "Película"
+                    : "Desconocido"}
+                </span>
+                {item.finalizada !== undefined && (
+                  <span className="bg-gray-100 px-3 py-1 rounded-full">
+                    <strong>Estado:</strong>{" "}
+                    {item.finalizada ? "Finalizada" : "En emisión"}
+                  </span>
+                )}
+              </div>
+              <p className="mb-4 text-gray-800">
+                <strong>Sinopsis:</strong> {item.sinopsis}
+              </p>
+            </div>
+            <div className="flex flex-col md:flex-row md:items-center gap-4">
+              <button
+                onClick={toggleCatalogo}
+                className={`px-6 py-2 rounded font-semibold shadow transition ${
+                  enCatalogo
+                    ? "bg-red-600 hover:bg-red-700 text-white"
+                    : "bg-green-600 hover:bg-green-700 text-white"
+                }`}
+                aria-label={
+                  enCatalogo ? "Eliminar de mi catálogo" : "Añadir a mi catálogo"
+                }
+                disabled={!enCatalogo && limiteAlcanzado}
+              >
+                {enCatalogo ? "Eliminar de mi catálogo" : "Añadir a mi catálogo"}
+              </button>
+              {!enCatalogo && limiteAlcanzado && (
+                <AvisoLimitePlan tipo={esSerie ? "series" : "películas"} />
+              )}
+              <div className="flex items-center gap-2 ml-auto">
+                <Estrellas
+                  valor={estadoCatalogo?.puntuacion || 0}
+                  onChange={cambiarPuntuacion}
+                />
+                <span className="text-sm text-gray-700">
+                  {estadoCatalogo?.puntuacion || 0} / 5
+                </span>
+                <PuntuacionTMDb puntuacion={item.puntuacion} />
+              </div>
+            </div>
+            {mensaje && <MensajeFlotante texto={mensaje} />}
+          </div>
         </div>
 
-        {item.imagen && (
-          <img
-            src={item.imagen}
-            alt={item.nombre}
-            className="w-64 mb-4 rounded shadow"
-          />
-        )}
-
-        <p className="mb-2">
-          <strong>Año:</strong> {item.anio || "Desconocido"}
-        </p>
-        <p className="mb-2">
-          <strong>Tipo:</strong>{" "}
-          {item.media_type === "tv"
-            ? "Serie"
-            : item.media_type === "movie"
-              ? "Película"
-              : "Desconocido"}
-        </p>
-        {item.finalizada !== undefined && (
-          <p className="mb-2">
-            <strong>Estado:</strong>{" "}
-            {item.finalizada ? "Finalizada" : "En emisión"}
-          </p>
-        )}
-
-        <p className="mb-4">
-          <strong>Sinopsis:</strong> {item.sinopsis}
-        </p>
-
-        <button
-          onClick={toggleCatalogo}
-          className={`mb-4 px-4 py-2 rounded text-white ${
-            enCatalogo
-              ? "bg-red-600 hover:bg-red-700"
-              : "bg-green-600 hover:bg-green-700"
-          }`}
-          aria-label={
-            enCatalogo ? "Eliminar de mi catálogo" : "Añadir a mi catálogo"
-          }
-          disabled={!enCatalogo && limiteAlcanzado}
-        >
-          {enCatalogo ? "Eliminar de mi catálogo" : "Añadir a mi catálogo"}
-        </button>
-        {!enCatalogo && limiteAlcanzado && (
-          <AvisoLimitePlan tipo={esSerie ? "series" : "películas"} />
-        )}
-
         {enCatalogo && (
-          <div className="mb-4 space-y-4">
-            <div className="flex items-center gap-4">
-              <div>
+          <div className="mb-8 bg-gray-50 rounded-lg p-6 shadow-inner">
+            <div className="flex flex-col md:flex-row gap-6">
+              <div className="flex-1">
                 <label className="text-sm font-medium mr-2">Estado:</label>
                 <SelectorEstado
                   estado={estadoCatalogo?.estado}
                   onChange={cambiarEstado}
                 />
               </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Plataformas donde la ves:
-              </label>
-              <div className="max-w-xs">
+              <div className="flex-1">
+                <label className="block text-sm font-medium mb-2">
+                  Plataformas donde la ves:
+                </label>
                 <SelectorPlataformas
                   plataformasSeleccionadas={plataformas}
                   onChange={setPlataformas}
                 />
+                {plataformas.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {plataformas.map((plataformaId) => {
+                      const plataforma = PLATAFORMAS_DISPONIBLES.find(
+                        (p) => p.id === plataformaId
+                      );
+                      const IconComponent = IconosPlataformas[plataformaId];
+                      return plataforma ? (
+                        <span
+                          key={plataforma.id}
+                          className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium bg-white text-gray-800 border"
+                        >
+                          {IconComponent && (
+                            <div className="w-4 h-4">
+                              <IconComponent />
+                            </div>
+                          )}
+                          {plataforma.nombre}
+                        </span>
+                      ) : null;
+                    })}
+                  </div>
+                )}
               </div>
             </div>
-
-            {plataformas.length > 0 && (
-              <div className="mt-2">
-                <div className="flex flex-wrap gap-2">
-                  {plataformas.map((plataformaId) => {
-                    const plataforma = PLATAFORMAS_DISPONIBLES.find(
-                      (p) => p.id === plataformaId
-                    );
-                    const IconComponent = IconosPlataformas[plataformaId];
-                    return plataforma ? (
-                      <span
-                        key={plataforma.id}
-                        className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 border"
-                      >
-                        {IconComponent && (
-                          <div className="w-4 h-4">
-                            <IconComponent />
-                          </div>
-                        )}
-                        {plataforma.nombre}
-                      </span>
-                    ) : null;
-                  })}
-                </div>
-              </div>
-            )}
           </div>
         )}
-        <section className="flex items-baseline">
-          <Estrellas
-            valor={estadoCatalogo?.puntuacion || 0}
-            onChange={(nueva) => {
-              /* lógica para guardar puntuación */
-            }}
-          />
-          <span className="ml-2 text-sm text-gray-700 align-middle">
-            {estadoCatalogo?.puntuacion || 0} / 5
-          </span>
-        </section>
-        {mensaje && <MensajeFlotante texto={mensaje} />}
 
         {item.media_type === "tv" && !item.desdeTMDB && (
           <section className="mt-8">

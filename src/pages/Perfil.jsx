@@ -263,30 +263,28 @@ export default function Perfil() {
       // 1. Antes de actualizar logros, guarda los IDs actuales
       const logrosAntes = logrosGuardados?.map((l) => l.logro_id) || [];
 
-      // 2. Guarda los nuevos logros desbloqueados
+      // 2. Guarda los nuevos logros desbloqueados y notifica inmediatamente
       for (const logro of logrosDesbloqueados) {
         const yaGuardado = logrosGuardados?.some(
           (l) => l.logro_id === logro.id
         );
         if (!yaGuardado) {
+          const fechaDesbloqueo = new Date().toISOString();
           await supabase.from("logros_usuario").upsert(
             [
               {
                 user_id: usuario.id,
                 logro_id: logro.id,
-                desbloqueado_en: new Date().toISOString(),
+                desbloqueado_en: fechaDesbloqueo,
               },
             ],
             { onConflict: ["user_id", "logro_id"] }
           );
+          // Notifica inmediatamente
+          await notificarLogroDesbloqueado(usuario.id, { ...logro, desbloqueado_en: fechaDesbloqueo });
+          // Añade la fecha al logro en el array local
+          logro.desbloqueado_en = fechaDesbloqueo;
         }
-      }
-
-      const nuevosLogros = logrosDesbloqueados.filter(
-        l => !logrosAntes.includes(l.id)
-      );
-      for (const logro of nuevosLogros) {
-        await notificarLogroDesbloqueado(usuario.id, logro);
       }
 
       // Añadir la fecha de desbloqueo a los logros para mostrarla en la UI
@@ -294,7 +292,7 @@ export default function Perfil() {
         const guardado = logrosGuardados?.find((l) => l.logro_id === logro.id);
         return {
           ...logro,
-          desbloqueado_en: guardado?.desbloqueado_en || null,
+          desbloqueado_en: logro.desbloqueado_en || guardado?.desbloqueado_en || null,
         };
       });
 
