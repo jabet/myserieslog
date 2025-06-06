@@ -8,7 +8,9 @@ import {
   calcularLogrosDesbloqueados,
   calcularLogrosProximos,
   obtenerEstadisticasLogros,
+  obtenerLogrosRecientes,
 } from "../utils/logros";
+import { notificarLogroDesbloqueado } from "../utils/notificaciones";
 
 export default function Perfil() {
   const { usuario, perfil, loading } = useUsuario();
@@ -120,12 +122,14 @@ export default function Perfil() {
       const { data: episodiosVistosData, error: errorEpisodiosData } =
         await supabase
           .from("episodios_vistos")
-          .select(`
+          .select(
+            `
     episodio_id,
     episodios (
       duracion
     )
-  `)
+  `
+          )
           .eq("user_id", usuario.id)
           .range(0, 2999); // Ajusta el rango si tienes más episodios
 
@@ -256,9 +260,14 @@ export default function Perfil() {
         console.error("Error cargando logros guardados:", errorLogrosGuardados);
       }
 
+      // 1. Antes de actualizar logros, guarda los IDs actuales
+      const logrosAntes = logrosGuardados?.map((l) => l.logro_id) || [];
+
       // 2. Guarda los nuevos logros desbloqueados
       for (const logro of logrosDesbloqueados) {
-        const yaGuardado = logrosGuardados?.some((l) => l.logro_id === logro.id);
+        const yaGuardado = logrosGuardados?.some(
+          (l) => l.logro_id === logro.id
+        );
         if (!yaGuardado) {
           await supabase.from("logros_usuario").upsert(
             [
@@ -271,6 +280,13 @@ export default function Perfil() {
             { onConflict: ["user_id", "logro_id"] }
           );
         }
+      }
+
+      const nuevosLogros = logrosDesbloqueados.filter(
+        l => !logrosAntes.includes(l.id)
+      );
+      for (const logro of nuevosLogros) {
+        await notificarLogroDesbloqueado(usuario.id, logro);
       }
 
       // Añadir la fecha de desbloqueo a los logros para mostrarla en la UI
@@ -606,22 +622,25 @@ export default function Perfil() {
                     </div>
                   ))}
                 </div>
-                {estadisticas.logros.desbloqueados.length > 12 && !mostrarTodosLogros && (
-                  <p
-                    className="text-xs text-blue-600 mt-2 cursor-pointer hover:underline"
-                    onClick={() => setMostrarTodosLogros(true)}
-                  >
-                    +{estadisticas.logros.desbloqueados.length - 12} logros más...
-                  </p>
-                )}
-                {estadisticas.logros.desbloqueados.length > 12 && mostrarTodosLogros && (
-                  <p
-                    className="text-xs text-blue-600 mt-2 cursor-pointer hover:underline"
-                    onClick={() => setMostrarTodosLogros(false)}
-                  >
-                    Mostrar menos
-                  </p>
-                )}
+                {estadisticas.logros.desbloqueados.length > 12 &&
+                  !mostrarTodosLogros && (
+                    <p
+                      className="text-xs text-blue-600 mt-2 cursor-pointer hover:underline"
+                      onClick={() => setMostrarTodosLogros(true)}
+                    >
+                      +{estadisticas.logros.desbloqueados.length - 12} logros
+                      más...
+                    </p>
+                  )}
+                {estadisticas.logros.desbloqueados.length > 12 &&
+                  mostrarTodosLogros && (
+                    <p
+                      className="text-xs text-blue-600 mt-2 cursor-pointer hover:underline"
+                      onClick={() => setMostrarTodosLogros(false)}
+                    >
+                      Mostrar menos
+                    </p>
+                  )}
               </div>
             )}
 

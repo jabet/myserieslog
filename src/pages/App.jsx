@@ -6,11 +6,8 @@ import useCatalogoUsuario from "../hooks/useCatalogoUsuario";
 import useProximasEmisiones from "../hooks/useProximasEmisiones";
 import ProximasEmisiones from "../components/ProximasEmisiones";
 import useUsuario from "../hooks/useUsuario";
-import { Card } from "@radix-ui/themes";
-import { useEffect, useState } from "react";
-import { supabase } from "../utils/supabaseClient";
 import useProximosEpisodiosUsuario from "../hooks/useProximosEpisodiosUsuario";
-import { inicializarProximosEpisodios } from "../utils/inicializarProximosEpisodios";
+
 
 export default function App() {
   const { usuario, idioma } = useUsuario();
@@ -23,18 +20,7 @@ export default function App() {
     loading,
   } = useCatalogoUsuario(usuario, idioma);
   const { proximos, loading: loadingProximos } = useProximasEmisiones(usuario);
-  const { proximosEpisodios, loading: loadingProximosEpisodios } =
-    useProximosEpisodiosUsuario(usuario);
-
-  const [episodios, setEpisodios] = useState([]);
-  const [vistos, setVistos] = useState([]);
-  const [proximosInicializados, setProximosInicializados] = useState(false);
-
-  // NUEVO: Estados para controlar la aparición progresiva
-  const [mostrarConProximos, setMostrarConProximos] = useState(false);
-  const [mostrarViendo, setMostrarViendo] = useState(false);
-  const [mostrarPendientes, setMostrarPendientes] = useState(false);
-  const [mostrarResto, setMostrarResto] = useState(false);
+  const { proximosEpisodios } = useProximosEpisodiosUsuario(usuario);
 
   // --- CÁLCULOS REORGANIZADOS - PRÓXIMOS CAPÍTULOS PRIMERO ---
   const hoy = new Date().toISOString().slice(0, 10);
@@ -91,105 +77,6 @@ export default function App() {
       !idsPendientes.has(item.id)
   );
 
-  // --- EFECTOS REORGANIZADOS ---
-
-  useEffect(() => {
-    if (!usuario) return;
-
-    // 1. Cargar todos los episodios de las series del catálogo
-    const cargarEpisodios = async () => {
-      const idsSeries = catalogo.map((item) => item.id);
-      if (idsSeries.length === 0) {
-        setEpisodios([]);
-        return;
-      }
-      const { data: episodiosData } = await supabase
-        .from("episodios")
-        .select("*")
-        .in("contenido_id", idsSeries)
-        .order("temporada", { ascending: true })
-        .order("episodio", { ascending: true });
-      setEpisodios(episodiosData || []);
-    };
-
-    // 2. Cargar episodios vistos por el usuario
-    const cargarVistos = async () => {
-      const { data: vistosData } = await supabase
-        .from("episodios_vistos")
-        .select("episodio_id")
-        .eq("user_id", usuario.id);
-      setVistos(vistosData ? vistosData.map((v) => v.episodio_id) : []);
-    };
-
-    cargarEpisodios();
-    cargarVistos();
-  }, [usuario, catalogo]);
-
-  // Inicializar próximos episodios una vez cuando el usuario esté listo
-  useEffect(() => {
-    if (!usuario?.id || proximosInicializados) return;
-
-    const inicializar = async () => {
-      try {
-        await inicializarProximosEpisodios(usuario.id);
-        setProximosInicializados(true);
-      } catch (error) {
-        console.error("Error en inicialización:", error);
-      }
-    };
-
-    inicializar();
-  }, [usuario?.id, proximosInicializados]);
-
-  // NUEVO: Efecto optimizado para mostrar contenido - conProximos calculado primero
-  useEffect(() => {
-    // Reset states when loading starts
-    if (loading) {
-      setMostrarConProximos(false);
-      setMostrarViendo(false);
-      setMostrarPendientes(false);
-      setMostrarResto(false);
-      return;
-    }
-
-    // Mostrar contenido progresivamente cuando termine de cargar
-    if (!loading && catalogo.length > 0) {
-      const timeouts = [];
-
-      // Nuevos capítulos (inmediato - ya calculado)
-      if (conProximos.length > 0) {
-        timeouts.push(setTimeout(() => setMostrarConProximos(true), 50));
-      }
-
-      // Continuar viendo (100ms después)
-      if (viendo.length > 0) {
-        timeouts.push(setTimeout(() => setMostrarViendo(true), 150));
-      }
-
-      // Quiero ver (200ms después)
-      if (pendientes.length > 0) {
-        timeouts.push(setTimeout(() => setMostrarPendientes(true), 250));
-      }
-
-      // Mi catálogo (300ms después)
-      if (resto.length > 0) {
-        timeouts.push(setTimeout(() => setMostrarResto(true), 350));
-      }
-
-      // Cleanup function
-      return () => {
-        timeouts.forEach((timeout) => clearTimeout(timeout));
-      };
-    }
-  }, [
-    loading,
-    catalogo.length, // Dependencia principal
-    conProximos.length, // Ya calculado inmediatamente
-    viendo.length,
-    pendientes.length,
-    resto.length,
-  ]);
-
   return (
     <div className="min-h-screen flex flex-col grid-rows-[auto_1fr_auto]">
       <Navbar />
@@ -204,7 +91,6 @@ export default function App() {
             />
             {loading ? (
               <div className="space-y-8">
-                {/* Skeletons con estructura fija */}
                 <SkeletonSection title="Nuevos capítulos" items={5} />
                 <SkeletonSection title="Continuar viendo" items={4} />
                 <SkeletonSection title="Quiero ver" items={3} />
@@ -212,27 +98,32 @@ export default function App() {
               </div>
             ) : (
               <div className="space-y-8">
-                {/* Sección 1: Nuevos capítulos - PRIMERA PRIORIDAD */}
                 <SectionContainer
-                  show={mostrarConProximos}
+                  show={conProximos.length > 0}
                   hasContent={conProximos.length > 0}
                 >
-                  <h2 className="text-xl font-bold mb-2">Nuevos capítulos</h2>
+                  <h2 className="text-xl font-bold mb-2 flex items-center gap-2">
+                    <span>Novedades</span>
+                    <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
+                      {conProximos.length}
+                    </span>
+                  </h2>
                   <CatalogoGrid catalogo={conProximos} />
                 </SectionContainer>
-
-                {/* Sección 2: Continuar viendo */}
                 <SectionContainer
-                  show={mostrarViendo}
+                  show={viendo.length > 0}
                   hasContent={viendo.length > 0}
                 >
-                  <h2 className="text-xl font-bold mb-2">Continuar viendo</h2>
+                  <h2 className="text-xl font-bold mb-2 flex items-center gap-2">
+                    <span>Continuar viendo</span>
+                    <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
+                      {viendo.length}
+                    </span>
+                  </h2>
                   <CatalogoGrid catalogo={viendo} />
                 </SectionContainer>
-
-                {/* Sección 3: Quiero ver */}
                 <SectionContainer
-                  show={mostrarPendientes}
+                  show={pendientes.length > 0}
                   hasContent={pendientes.length > 0}
                 >
                   <h2 className="text-xl font-bold mb-2 flex items-center gap-2">
@@ -243,13 +134,16 @@ export default function App() {
                   </h2>
                   <CatalogoGrid catalogo={pendientes} />
                 </SectionContainer>
-
-                {/* Sección 4: Mi catálogo */}
                 <SectionContainer
-                  show={mostrarResto}
+                  show={resto.length > 0}
                   hasContent={resto.length > 0}
                 >
-                  <h2 className="text-xl font-bold mb-2">Mi catálogo</h2>
+                  <h2 className="text-xl font-bold mb-2">
+                    <span>Mi catálogo</span>{" "}
+                    <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
+                      {resto.length}
+                    </span>
+                  </h2>
                   <CatalogoGrid catalogo={resto} />
                 </SectionContainer>
               </div>
@@ -265,7 +159,6 @@ export default function App() {
   );
 }
 
-// Componentes auxiliares sin cambios...
 function SkeletonSection({ title, items }) {
   const widthMap = {
     "Nuevos capítulos": "w-48",
@@ -299,7 +192,6 @@ function SkeletonSection({ title, items }) {
 
 function SectionContainer({ show, hasContent, children }) {
   if (!hasContent) return null;
-
   return (
     <section
       className={`mb-8 transition-all duration-500 ${

@@ -74,10 +74,32 @@ export default function NotificacionesBell({ usuario }) {
                   >
                     {/* Imagen a la izquierda */}
                     <img
-                      src={n.imagen || "../src/assets/placerhold40x60.png"}
+                      src={
+                        n.imagen &&
+                        (n.imagen.startsWith("http") ||
+                          n.imagen.startsWith("/"))
+                          ? n.imagen
+                          : undefined
+                      }
                       alt="Notificación"
-                      className="w-10 h-10 object-cover rounded mr-2 flex-shrink-0"
+                      className="w-10 h-auto object-cover rounded mr-2 flex-shrink-0"
+                      style={{
+                        display:
+                          n.imagen &&
+                          (n.imagen.startsWith("http") ||
+                            n.imagen.startsWith("/"))
+                            ? "block"
+                            : "none",
+                      }}
                     />
+                    {n.imagen &&
+                      !(
+                        n.imagen.startsWith("http") || n.imagen.startsWith("/")
+                      ) && (
+                        <span className="w-10 h-10 flex items-center justify-center text-3xl mr-2">
+                          {n.imagen}
+                        </span>
+                      )}
                     <div className="flex-1">
                       <a
                         href={n.url}

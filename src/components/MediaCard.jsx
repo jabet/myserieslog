@@ -37,9 +37,13 @@ export default function MediaCard({
             alt={nombre}
             className="w-full max-h-[407px] min-h-45 aspect-auto object-cover"
           />
-          {conProximos && (
+          {conProximos && proximoEpisodio && (
             <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-auto bg-red-500 text-white text-xs font-semibold px-2 py-1 text-center">
-              Nuevos capítulos
+              {proximoEpisodio.temporada === 1 && proximoEpisodio.episodio === 1
+                ? "Nuevo lanzamiento"
+                : proximoEpisodio.episodio === 1
+                ? "Nueva temporada"
+                : "Nuevo capítulo"}
             </span>
           )}
         </div>
