@@ -15,6 +15,7 @@ import Dashboard from "./pages/Dashboard.jsx";
 import RedSocial from "./pages/RedSocial.jsx";
 import React from "react";
 import Perfil from "./pages/Perfil.jsx";
+import Pro from "./pages/Pro.jsx";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
@@ -30,8 +31,9 @@ createRoot(document.getElementById("root")).render(
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/social" element={<RedSocial />} />
           <Route path="/perfil" element={<Perfil />} />
+          <Route path="/pro" element={<Pro />} />
         </Routes>
       </HashRouter>
-     </Theme>
+    </Theme>
   </StrictMode>
 );

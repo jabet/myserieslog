@@ -7,6 +7,7 @@ export default function useUsuario() {
   const [perfil, setPerfil] = useState(null);
   const [loading, setLoading] = useState(true);
   const [esAdmin, setEsAdmin] = useState(false);
+  const [plan, setPlan] = useState(null);
 
   useEffect(() => {
     const cargarUsuario = async () => {
@@ -31,7 +32,7 @@ export default function useUsuario() {
       // Perfil
       const { data: perfilData } = await supabase
         .from("usuarios")
-        .select("nick, avatar, comparte_catalogo, rol")
+        .select("nick, avatar, comparte_catalogo, rol, plan") // <-- añade plan aquí
         .eq("user_id", user.id)
         .maybeSingle();
       setPerfil(perfilData);
@@ -42,11 +43,15 @@ export default function useUsuario() {
       // O por email:
       // if (user.email === "tuadmin@dominio.com") setEsAdmin(true);
 
+      if (perfilData?.plan) {
+        setPlan(perfilData.plan);
+      }
+
       setLoading(false);
     };
 
     cargarUsuario();
   }, []);
 
-  return { usuario, idioma, perfil, esAdmin, loading };
+  return { usuario, idioma, perfil, esAdmin, loading, plan };
 }
