@@ -221,7 +221,10 @@ export default function Detalle() {
       const estadisticasAhora = await obtenerStats();
 
       // 3. Calcular logros recién desbloqueados
-      const nuevosLogros = obtenerLogrosRecientes(estadisticasAntes, estadisticasAhora);
+      const nuevosLogros = obtenerLogrosRecientes(
+        estadisticasAntes,
+        estadisticasAhora
+      );
       for (const logro of nuevosLogros) {
         await notificarLogroDesbloqueado(usuario.id, logro);
       }
@@ -255,8 +258,8 @@ export default function Detalle() {
       nuevo === "pendiente"
         ? "Añadida a “Lo quiero ver”"
         : nuevo === "viendo"
-        ? "Estado cambiado a “Viéndola”"
-        : "Marcada como “Ya la vi”"
+          ? "Estado cambiado a “Viéndola”"
+          : "Marcada como “Ya la vi”"
     );
   };
 
@@ -315,7 +318,9 @@ export default function Detalle() {
                   <button
                     onClick={toggleFavorito}
                     className="ml-2"
-                    aria-label={favorito ? "Quitar de favoritos" : "Añadir a favoritos"}
+                    aria-label={
+                      favorito ? "Quitar de favoritos" : "Añadir a favoritos"
+                    }
                   >
                     {favorito ? (
                       <StarFilledIcon className="w-7 h-7 text-yellow-500" />
@@ -331,11 +336,8 @@ export default function Detalle() {
                 </span>
                 <span className="bg-gray-100 px-3 py-1 rounded-full">
                   <strong>Tipo:</strong>{" "}
-                  {item.media_type === "tv"
-                    ? "Serie"
-                    : item.media_type === "movie"
-                    ? "Película"
-                    : "Desconocido"}
+                  {item.tipo ||
+                    (item.media_type === "tv" ? "Serie" : "Película")}
                 </span>
                 {item.finalizada !== undefined && (
                   <span className="bg-gray-100 px-3 py-1 rounded-full">
@@ -357,11 +359,15 @@ export default function Detalle() {
                     : "bg-green-600 hover:bg-green-700 text-white"
                 }`}
                 aria-label={
-                  enCatalogo ? "Eliminar de mi catálogo" : "Añadir a mi catálogo"
+                  enCatalogo
+                    ? "Eliminar de mi catálogo"
+                    : "Añadir a mi catálogo"
                 }
                 disabled={!enCatalogo && limiteAlcanzado}
               >
-                {enCatalogo ? "Eliminar de mi catálogo" : "Añadir a mi catálogo"}
+                {enCatalogo
+                  ? "Eliminar de mi catálogo"
+                  : "Añadir a mi catálogo"}
               </button>
               {!enCatalogo && limiteAlcanzado && (
                 <AvisoLimitePlan tipo={esSerie ? "series" : "películas"} />
