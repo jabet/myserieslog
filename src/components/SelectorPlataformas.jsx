@@ -18,7 +18,7 @@ export default function SelectorPlataformas({ plataformasSeleccionadas = [], onC
     : "Seleccionar plataformas";
 
   return (
-    <div className="relative">
+    <div className="relative ">
       <button
         onClick={() => setAbierto(!abierto)}
         className="w-full text-left px-3 py-2 border border-gray-300 rounded-md bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-between"
@@ -30,13 +30,13 @@ export default function SelectorPlataformas({ plataformasSeleccionadas = [], onC
                 {plataformasSeleccionadas.slice(0, 3).map(plataformaId => {
                   const IconComponent = IconosPlataformas[plataformaId];
                   return IconComponent ? (
-                    <div key={plataformaId} className="w-6 h-6 bg-white rounded border">
+                    <div key={plataformaId} className="object-fit-contain mr-1 ml-1 w-4 h-4">
                       <IconComponent />
                     </div>
                   ) : null;
                 })}
                 {plataformasSeleccionadas.length > 3 && (
-                  <div className="w-6 h-6 bg-gray-100 rounded border flex items-center justify-center text-xs">
+                  <div className="w-5 h-5 bg-gray-100 rounded border flex items-center justify-center text-xs">
                     +{plataformasSeleccionadas.length - 3}
                   </div>
                 )}

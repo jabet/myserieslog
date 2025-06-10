@@ -21,7 +21,7 @@ export default function DetallePlataformas({
         </div>
         <div className="flex-1">
           <label className="block text-sm font-medium mb-2">
-            Plataformas donde la ves:
+            ¿Donde estas viendo la serie?:
           </label>
           <SelectorPlataformas
             plataformasSeleccionadas={plataformas}
