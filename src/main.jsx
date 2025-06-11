@@ -16,13 +16,15 @@ import RedSocial from "./pages/RedSocial.jsx";
 import React from "react";
 import Perfil from "./pages/Perfil.jsx";
 import Pro from "./pages/Pro.jsx";
+import LandingPage from "./pages/LandingPage.jsx";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <Theme appearance="light" accentColor="blue">
       <HashRouter>
         <Routes>
-          <Route path="/" element={<App />} />
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/catalogo" element={<App />} />
           <Route path="/login" element={<Login />} />
           <Route path="/detalle/:media_type/:id" element={<Detalle />} />
           <Route path="/preferencias" element={<PreferenciasUsuario />} />
