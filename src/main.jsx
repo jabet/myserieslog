@@ -17,6 +17,10 @@ import React from "react";
 import Perfil from "./pages/Perfil.jsx";
 import Pro from "./pages/Pro.jsx";
 import LandingPage from "./pages/LandingPage.jsx";
+import Privacidad from "./pages/Privacidad.jsx";
+import Cookies from "./pages/Cookies.jsx";
+import AvisoLegal from "./pages/AvisoLegal.jsx";
+import Contacto from "./pages/Contacto.jsx";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
@@ -34,6 +38,10 @@ createRoot(document.getElementById("root")).render(
           <Route path="/social" element={<RedSocial />} />
           <Route path="/perfil" element={<Perfil />} />
           <Route path="/pro" element={<Pro />} />
+          <Route path="/privacidad" element={<Privacidad />} />
+          <Route path="/cookies" element={<Cookies />} />
+          <Route path="/aviso-legal" element={<AvisoLegal />} />
+          <Route path="/contacto" element={<Contacto />} />
         </Routes>
       </HashRouter>
     </Theme>
