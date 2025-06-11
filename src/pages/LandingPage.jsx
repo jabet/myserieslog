@@ -33,7 +33,8 @@ export default function LandingPage() {
             Iniciar sesión
           </Link>
           <Link
-            to="/registro"
+            to="/login"
+            state={{ modo: "registro" }}
             className="bg-white hover:bg-gray-100 text-slate-900 font-semibold px-8 py-3 rounded shadow transition"
           >
             Crear cuenta gratis

@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { supabase } from "../utils/supabaseClient";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
@@ -29,7 +29,10 @@ const schemaRegistro = schemaLogin
   });
 
 export default function Login() {
-  const [modo, setModo] = useState("login"); // 'login' o 'registro'
+  const location = useLocation();
+  const [modo, setModo] = useState(
+    location.state?.modo === "registro" ? "registro" : "login"
+  );
   const [errorMsg, setErrorMsg] = useState("");
   const [loading, setLoading] = useState(false);
   const [showReset, setShowReset] = useState(false);
