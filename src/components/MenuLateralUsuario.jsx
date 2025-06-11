@@ -1,7 +1,10 @@
 import { Link } from "react-router-dom";
 import { supabase } from "../utils/supabaseClient";
+import useUsuario from "../hooks/useUsuario";
 
-export default function MenuLateralUsuario({ usuario, perfil, abierto, setAbierto }) {
+export default function MenuLateralUsuario({ abierto, setAbierto }) {
+  const { usuario, perfil } = useUsuario();
+
   const cerrarSesion = async () => {
     await supabase.auth.signOut();
     window.location.href = "/login";
