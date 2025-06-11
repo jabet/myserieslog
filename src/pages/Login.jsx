@@ -167,7 +167,7 @@ export default function Login() {
   // Si está en modo recuperación, solo muestra el formulario de cambio de contraseña
   if (isRecovery) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
+      <div className="min-h-screen grid-rows-[auto_1fr_auto] flex flex-col items-center justify-center bg-gray-100 px-4">
         <div className="bg-white shadow p-6 rounded w-full max-w-md">
           <h2 className="text-2xl font-bold mb-4 text-center">
             Cambia tu contraseña
