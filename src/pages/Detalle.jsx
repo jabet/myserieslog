@@ -3,14 +3,10 @@ import { useEffect, useState } from "react";
 import { supabase } from "../utils/supabaseClient";
 import Navbar from "../components/Navbar";
 import EpisodiosPorTemporada from "../components/EpisodiosPorTemporada";
-import SelectorEstado from "../components/SelectorEstado";
 import Footer from "../components/Footer";
-import Estrellas from "../components/Estrella";
 import MensajeFlotante from "../components/MensajeFlotante";
-import { StarIcon, StarFilledIcon } from "@radix-ui/react-icons";
 import useUsuario from "../hooks/useUsuario";
 import useTMDBDetalle from "../hooks/useTMDBDetalle";
-import SelectorPlataformas from "../components/SelectorPlataformas";
 import { IconosPlataformas } from "../components/IconosPlataformas";
 import { PLATAFORMAS_DISPONIBLES } from "../constants/plataformas";
 import { guardarContenidoTMDb } from "../utils/guardarContenidoTMDb";
@@ -19,7 +15,8 @@ import useCatalogoUsuario from "../hooks/useCatalogoUsuario";
 import AvisoLimitePlan from "../components/AvisoLimitePlan";
 import { obtenerLogrosRecientes } from "../utils/logros";
 import { notificarLogroDesbloqueado } from "../utils/notificaciones";
-import PuntuacionTMDb from "../components/PuntuacionTMDb";
+// Importa los componentes agrupados
+import { DetalleHeader, DetallePlataformas } from "../components/detalle";
 
 export default function Detalle() {
   const { media_type, id } = useParams();
@@ -302,137 +299,49 @@ export default function Detalle() {
     <>
       <Navbar />
       <main className="pt-24 px-4 max-w-4xl mx-auto">
-        <div className="flex flex-col md:flex-row gap-8 bg-white rounded-xl shadow-lg p-6 mb-8">
-          {item.imagen && (
-            <img
-              src={item.imagen}
-              alt={item.nombre}
-              className="w-64 h-96 object-cover rounded-lg shadow-md mx-auto md:mx-0"
-            />
+        {/* Cabecera con imagen, título, estrellas, TMDb y favorito */}
+        <DetalleHeader
+          item={item}
+          enCatalogo={enCatalogo}
+          favorito={favorito}
+          toggleFavorito={toggleFavorito}
+          estadoCatalogo={estadoCatalogo}
+          cambiarPuntuacion={cambiarPuntuacion}
+        />
+
+        <div className="flex flex-col md:flex-row md:items-center gap-4">
+          <button
+            onClick={toggleCatalogo}
+            className={`px-6 py-2 rounded font-semibold shadow transition ${
+              enCatalogo
+                ? "bg-red-600 hover:bg-red-700 text-white"
+                : "bg-green-600 hover:bg-green-700 text-white"
+            }`}
+            aria-label={
+              enCatalogo ? "Eliminar de mi catálogo" : "Añadir a mi catálogo"
+            }
+            disabled={!enCatalogo && limiteAlcanzado}
+          >
+            {enCatalogo ? "Eliminar de mi catálogo" : "Añadir a mi catálogo"}
+          </button>
+          {!enCatalogo && limiteAlcanzado && (
+            <AvisoLimitePlan tipo={esSerie ? "series" : "películas"} />
           )}
-          <div className="flex-1 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-3xl font-bold">{item.nombre}</h1>
-                {enCatalogo && (
-                  <button
-                    onClick={toggleFavorito}
-                    className="ml-2"
-                    aria-label={
-                      favorito ? "Quitar de favoritos" : "Añadir a favoritos"
-                    }
-                  >
-                    {favorito ? (
-                      <StarFilledIcon className="w-7 h-7 text-yellow-500" />
-                    ) : (
-                      <StarIcon className="w-7 h-7 text-gray-400" />
-                    )}
-                  </button>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-4 mb-4 text-gray-700 text-sm">
-                <span className="bg-gray-100 px-3 py-1 rounded-full">
-                  <strong>Año:</strong> {item.anio || "Desconocido"}
-                </span>
-                <span className="bg-gray-100 px-3 py-1 rounded-full">
-                  <strong>Tipo:</strong>{" "}
-                  {item.tipo ||
-                    (item.media_type === "tv" ? "Serie" : "Película")}
-                </span>
-                {item.finalizada !== undefined && (
-                  <span className="bg-gray-100 px-3 py-1 rounded-full">
-                    <strong>Estado:</strong>{" "}
-                    {item.finalizada ? "Finalizada" : "En emisión"}
-                  </span>
-                )}
-              </div>
-              <p className="mb-4 text-gray-800">
-                <strong>Sinopsis:</strong> {item.sinopsis}
-              </p>
-            </div>
-            <div className="flex flex-col md:flex-row md:items-center gap-4">
-              <button
-                onClick={toggleCatalogo}
-                className={`px-6 py-2 rounded font-semibold shadow transition ${
-                  enCatalogo
-                    ? "bg-red-600 hover:bg-red-700 text-white"
-                    : "bg-green-600 hover:bg-green-700 text-white"
-                }`}
-                aria-label={
-                  enCatalogo
-                    ? "Eliminar de mi catálogo"
-                    : "Añadir a mi catálogo"
-                }
-                disabled={!enCatalogo && limiteAlcanzado}
-              >
-                {enCatalogo
-                  ? "Eliminar de mi catálogo"
-                  : "Añadir a mi catálogo"}
-              </button>
-              {!enCatalogo && limiteAlcanzado && (
-                <AvisoLimitePlan tipo={esSerie ? "series" : "películas"} />
-              )}
-              <div className="flex items-center gap-2 ml-auto">
-                <Estrellas
-                  valor={estadoCatalogo?.puntuacion || 0}
-                  onChange={cambiarPuntuacion}
-                />
-                <span className="text-sm text-gray-700">
-                  {estadoCatalogo?.puntuacion || 0} / 5
-                </span>
-                <PuntuacionTMDb puntuacion={item.puntuacion} />
-              </div>
-            </div>
-            {mensaje && <MensajeFlotante texto={mensaje} />}
-          </div>
         </div>
 
+        {mensaje && <MensajeFlotante texto={mensaje} />}
+
+        {/* Estado y plataformas */}
         {enCatalogo && (
-          <div className="mb-8 bg-gray-50 rounded-lg p-6 shadow-inner">
-            <div className="flex flex-col md:flex-row gap-6">
-              <div className="flex-1">
-                <label className="text-sm font-medium mr-2">Estado:</label>
-                <SelectorEstado
-                  estado={estadoCatalogo?.estado}
-                  onChange={cambiarEstado}
-                />
-              </div>
-              <div className="flex-1">
-                <label className="block text-sm font-medium mb-2">
-                  Plataformas donde la ves:
-                </label>
-                <SelectorPlataformas
-                  plataformasSeleccionadas={plataformas}
-                  onChange={setPlataformas}
-                />
-                {plataformas.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {plataformas.map((plataformaId) => {
-                      const plataforma = PLATAFORMAS_DISPONIBLES.find(
-                        (p) => p.id === plataformaId
-                      );
-                      const IconComponent = IconosPlataformas[plataformaId];
-                      return plataforma ? (
-                        <span
-                          key={plataforma.id}
-                          className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium bg-white text-gray-800 border"
-                        >
-                          {IconComponent && (
-                            <div className="w-4 h-4">
-                              <IconComponent />
-                            </div>
-                          )}
-                          {plataforma.nombre}
-                        </span>
-                      ) : null;
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+          <DetallePlataformas
+            estadoCatalogo={estadoCatalogo}
+            cambiarEstado={cambiarEstado}
+            plataformas={plataformas}
+            setPlataformas={setPlataformas}
+          />
         )}
 
+        {/* Episodios por temporada */}
         {item.media_type === "tv" && !item.desdeTMDB && (
           <section className="mt-8">
             <EpisodiosPorTemporada

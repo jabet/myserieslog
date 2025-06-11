@@ -7,6 +7,7 @@ import useUsuario from "../hooks/useUsuario";
 import React from "react";
 import NotificacionesBell from "./NotificacionesBell";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import MenuLateralUsuario from "./MenuLateralUsuario";
 
 export default function Navbar() {
   const { usuario, perfil, esAdmin, loading } = useUsuario();
@@ -230,6 +231,13 @@ export default function Navbar() {
           )}
         </ul>
       </div>
+
+      <MenuLateralUsuario
+        usuario={usuario}
+        perfil={perfil}
+        abierto={menuOpen}
+        setAbierto={setMenuOpen}
+      />
     </>
   );
 }

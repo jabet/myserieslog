@@ -53,7 +53,7 @@ export default function FiltrosCatalogo({
   }, [filtroTipo, filtroAnio, filtroEstado, filtroTexto]);
 
   return (
-    <div className="mb-6 flex flex-col md:flex-row gap-4 text-md items-center">
+    <div className="mb-6 flex flex-col md:flex-row gap-4 text-xs items-center">
       <RadixSelect
         value={filtroTipo}
         onValueChange={setFiltroTipo}
@@ -83,7 +83,7 @@ export default function FiltrosCatalogo({
       />
       <input
         type="text"
-        className="border px-3 py-2 rounded shadow-sm focus:ring-2 focus:ring-blue-400"
+        className="border px-3 py-1 rounded shadow-sm focus:ring-2 focus:ring-blue-400 text-xs"
         placeholder="Buscar por nombre..."
         value={filtroTexto}
         onChange={(e) => setFiltroTexto(e.target.value)}

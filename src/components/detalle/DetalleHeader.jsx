@@ -1,6 +1,6 @@
 import { StarIcon, StarFilledIcon } from "@radix-ui/react-icons";
-import Estrellas from "./Estrella";
-import PuntuacionTMDb from "./PuntuacionTMDb";
+import Estrellas from "../Estrella";
+import PuntuacionTMDb from "../PuntuacionTMDb";
 
 export default function DetalleHeader({
   item,
