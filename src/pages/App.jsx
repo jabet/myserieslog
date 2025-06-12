@@ -1,13 +1,15 @@
 import Navbar from "../components/Navbar";
-import CatalogoGrid from "../components/CatalogoGrid";
 import Footer from "../components/Footer";
-import FiltrosCatalogo from "../components/FiltrosCatalogo";
 import useCatalogoUsuario from "../hooks/useCatalogoUsuario";
 import useProximasEmisiones from "../hooks/useProximasEmisiones";
-import ProximasEmisiones from "../components/ProximasEmisiones";
 import useUsuario from "../hooks/useUsuario";
 import useProximosEpisodiosUsuario from "../hooks/useProximosEpisodiosUsuario";
+import { lazy, Suspense, useMemo, useDeferredValue } from "react";
 
+// Lazy load de componentes pesados
+const FiltrosCatalogo = lazy(() => import("../components/FiltrosCatalogo"));
+const CatalogoGrid = lazy(() => import("../components/CatalogoGrid"));
+const ProximasEmisiones = lazy(() => import("../components/ProximasEmisiones"));
 
 export default function App() {
   const { usuario, idioma } = useUsuario();
@@ -22,12 +24,10 @@ export default function App() {
   const { proximos, loading: loadingProximos } = useProximasEmisiones(usuario);
   const { proximosEpisodios } = useProximosEpisodiosUsuario(usuario);
 
-  // --- CÁLCULOS REORGANIZADOS - PRÓXIMOS CAPÍTULOS PRIMERO ---
-  const hoy = new Date().toISOString().slice(0, 10);
-
-  // 1. PRIMERA PRIORIDAD: Series con próximos capítulos (calculado INMEDIATAMENTE)
-  const idsProximos = new Set(proximos.map((p) => p.contenido_id));
-  const conProximos = catalogo
+  // Memoización de cálculos pesados
+  const hoy = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const idsProximos = useMemo(() => new Set(proximos.map((p) => p.contenido_id)), [proximos]);
+  const conProximos = useMemo(() => catalogo
     .filter((item) => idsProximos.has(item.id))
     .map((item) => {
       const episodiosSerie = proximos.filter((p) => p.contenido_id === item.id);
@@ -35,10 +35,9 @@ export default function App() {
         .filter((ep) => ep.fecha_emision >= hoy)
         .sort((a, b) => a.fecha_emision.localeCompare(b.fecha_emision))[0];
       return { ...item, conProximos: true, proximoEpisodio };
-    });
+    }), [catalogo, idsProximos, proximos, hoy]);
 
-  // 2. Map para próximos episodios (después de conProximos)
-  const proximosMap = new Map(
+  const proximosMap = useMemo(() => new Map(
     proximosEpisodios.map((p) => [
       p.contenido_id,
       {
@@ -49,33 +48,31 @@ export default function App() {
         id: p.episodios?.id,
       },
     ])
-  );
+  ), [proximosEpisodios]);
 
-  // 3. SEGUNDA PRIORIDAD: Series que estoy viendo (excluye las que ya están en conProximos)
-  const viendo = catalogo
+  // Calcula primero las novedades (conProximos)
+  const viendo = useDeferredValue(useMemo(() => catalogo
     .filter((item) => item.estado === "viendo" && !idsProximos.has(item.id))
     .map((item) => {
       const proximoEpisodio = proximosMap.get(item.id) || null;
       return { ...item, proximoEpisodio };
-    });
+    }), [catalogo, idsProximos, proximosMap]));
 
-  // 4. TERCERA PRIORIDAD: Series pendientes (excluye conProximos y viendo)
-  const idsViendo = new Set(viendo.map((item) => item.id));
-  const pendientes = catalogo.filter(
+  const idsViendo = useMemo(() => new Set(viendo.map((item) => item.id)), [viendo]);
+  const pendientes = useDeferredValue(useMemo(() => catalogo.filter(
     (item) =>
       item.estado === "pendiente" &&
       !idsProximos.has(item.id) &&
       !idsViendo.has(item.id)
-  );
+  ), [catalogo, idsProximos, idsViendo]));
 
-  // 5. CUARTA PRIORIDAD: El resto del catálogo
-  const idsPendientes = new Set(pendientes.map((item) => item.id));
-  const resto = catalogo.filter(
+  const idsPendientes = useMemo(() => new Set(pendientes.map((item) => item.id)), [pendientes]);
+  const resto = useDeferredValue(useMemo(() => catalogo.filter(
     (item) =>
       !idsProximos.has(item.id) &&
       !idsViendo.has(item.id) &&
       !idsPendientes.has(item.id)
-  );
+  ), [catalogo, idsProximos, idsViendo, idsPendientes]));
 
   return (
     <div className="min-h-screen flex flex-col grid-rows-[auto_1fr_auto]">
@@ -83,12 +80,14 @@ export default function App() {
       <main className="flex-1 pt-20 px-4">
         <div className="flex flex-col md:flex-row gap-8 max-w-7xl mx-auto">
           <div className="flex-1 min-w-0">
-            <FiltrosCatalogo
-              tipos={tiposDisponibles}
-              anios={aniosDisponibles}
-              estados={estadosDisponibles}
-              onFiltrar={aplicarFiltros}
-            />
+            <Suspense fallback={<div>Cargando filtros...</div>}>
+              <FiltrosCatalogo
+                tipos={tiposDisponibles}
+                anios={aniosDisponibles}
+                estados={estadosDisponibles}
+                onFiltrar={aplicarFiltros}
+              />
+            </Suspense>
             {loading ? (
               <div className="space-y-8">
                 <SkeletonSection title="Nuevos capítulos" items={5} />
@@ -108,7 +107,9 @@ export default function App() {
                       {conProximos.length}
                     </span>
                   </h2>
-                  <CatalogoGrid catalogo={conProximos} />
+                  <Suspense fallback={<div>Cargando catálogo...</div>}>
+                    <CatalogoGrid catalogo={conProximos} />
+                  </Suspense>
                 </SectionContainer>
                 <SectionContainer
                   show={viendo.length > 0}
@@ -120,7 +121,9 @@ export default function App() {
                       {viendo.length}
                     </span>
                   </h2>
-                  <CatalogoGrid catalogo={viendo} />
+                  <Suspense fallback={<div>Cargando catálogo...</div>}>
+                    <CatalogoGrid catalogo={viendo} />
+                  </Suspense>
                 </SectionContainer>
                 <SectionContainer
                   show={pendientes.length > 0}
@@ -132,7 +135,9 @@ export default function App() {
                       {pendientes.length}
                     </span>
                   </h2>
-                  <CatalogoGrid catalogo={pendientes} />
+                  <Suspense fallback={<div>Cargando catálogo...</div>}>
+                    <CatalogoGrid catalogo={pendientes} />
+                  </Suspense>
                 </SectionContainer>
                 <SectionContainer
                   show={resto.length > 0}
@@ -144,13 +149,17 @@ export default function App() {
                       {resto.length}
                     </span>
                   </h2>
-                  <CatalogoGrid catalogo={resto} />
+                  <Suspense fallback={<div>Cargando catálogo...</div>}>
+                    <CatalogoGrid catalogo={resto} />
+                  </Suspense>
                 </SectionContainer>
               </div>
             )}
           </div>
           <aside className="w-full md:w-80 shrink-0">
-            <ProximasEmisiones emisiones={proximos} loading={loadingProximos} />
+            <Suspense fallback={<div>Cargando próximas emisiones...</div>}>
+              <ProximasEmisiones emisiones={proximos} loading={loadingProximos} />
+            </Suspense>
           </aside>
         </div>
       </main>
