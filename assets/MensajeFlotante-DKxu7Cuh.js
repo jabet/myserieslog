@@ -1,0 +1,1 @@
+import{j as r}from"./index-B3ie1F2B.js";function t({texto:e}){return e?r.jsx("div",{className:"fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-yellow-100 border border-yellow-300 text-yellow-800 px-4 py-2 rounded shadow-md z-50",children:e}):null}export{t as M};
