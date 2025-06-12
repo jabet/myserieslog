@@ -21,7 +21,7 @@ export default function LandingPage() {
       />
       <div className="min-h-screen grid-rows-[auto_1fr_auto] flex flex-col bg-gradient-to-b from-slate-900 to-sky-900">
         <Navbar />
-        <main className="flex-1 flex flex-col items-center justify-center px-4 text-white">
+        <main className="flex-1 flex flex-col items-center justify-center px-4 text-white pt-16">
           <h1 className="text-4xl md:text-6xl font-bold mb-6 text-center">
             My Series Log
           </h1>

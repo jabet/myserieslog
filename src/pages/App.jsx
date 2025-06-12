@@ -147,7 +147,7 @@ export default function App() {
                       {conProximos.length}
                     </span>
                   </h2>
-                  <CatalogoGrid catalogo={conProximos} className="lg:h-80" />
+                  <CatalogoGrid catalogo={conProximos} className="lg:min-h-80" />
                 </SectionContainer>
                 <SectionContainer
                   show={viendo.length > 0}
