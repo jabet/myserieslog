@@ -16,11 +16,14 @@ import Footer from "../components/Footer";
 import MensajeFlotante from "../components/MensajeFlotante";
 import AdminEnviarNotificacion from "../components/admin/AdminEnviarNotificacion";
 
-import { guardarContenidoTMDb } from "../utils/guardarContenidoTMDb";
+import {
+  guardarContenidoTMDb,
+  guardarEpisodiosSerieTMDb,
+} from "../utils/guardarContenidoTMDb";
+
 import useUsuario from "../hooks/useUsuario"; // <-- Importa el hook correctamente
 
 export default function AdminPanel() {
-  // TODOS los useState y useEffect aquí, ANTES de cualquier return o if
   const { usuario, perfil, esAdmin, loading: loadingUsuario } = useUsuario();
 
   const [contenidos, setContenidos] = useState([]);
@@ -498,6 +501,75 @@ export default function AdminPanel() {
     </option>
   ));
 
+  // Detectar contenidos incompletos (puedes ajustar los campos según tus necesidades)
+  const contenidosIncompletos = contenidos.filter((c) => {
+    // Comunes a ambos tipos
+    if (
+      !c.sinopsis ||
+      !c.imagen ||
+      !c.generos ||
+      (Array.isArray(c.generos) && c.generos.length === 0)
+    ) {
+      return true;
+    }
+    // Es película
+    if (c.media_type === "movie") {
+      return !c.duracion || c.duracion === 0;
+    }
+    // Es serie
+    if (c.media_type === "tv") {
+      return (
+        !c.temporadas ||
+        c.temporadas === 0 ||
+        !c.episodios_totales ||
+        c.episodios_totales === 0
+      );
+    }
+    return false;
+  });
+  // Devuelve el primer campo relevante que falta para mostrarlo en la lista
+  function campoFaltante(c) {
+    if (!c.sinopsis) return "sinopsis";
+    if (!c.imagen) return "imagen";
+    if (!c.generos || (Array.isArray(c.generos) && c.generos.length === 0))
+      return "géneros";
+    if (c.media_type === "movie" && (!c.duracion || c.duracion === 0))
+      return "duración";
+    if (c.media_type === "tv") {
+      if (!c.temporadas || c.temporadas === 0) return "temporadas";
+      if (!c.episodios_totales || c.episodios_totales === 0) return "episodios";
+    }
+    return "dato desconocido";
+  }
+
+  // Función para actualizar todos los incompletos
+  const handleActualizarIncompletos = async () => {
+    if (contenidosIncompletos.length === 0) {
+      mostrarMensaje("No hay contenidos incompletos.");
+      return;
+    }
+    mostrarMensaje("Actualizando contenidos incompletos...");
+    for (const c of contenidosIncompletos) {
+      // 1. Actualiza datos generales desde TMDb
+      await guardarContenidoTMDb(c.id, c.media_type, "es-ES");
+
+      // 2. Si es serie, guarda episodios
+      if (c.media_type === "tv") {
+        await guardarEpisodiosSerieTMDb(c.id, "es-ES");
+      }
+
+      // 3. Actualiza la fecha de última actualización en Supabase
+      await supabase
+        .from("contenido")
+        .update({ ultima_actualizacion: new Date().toISOString() })
+        .eq("id", c.id);
+
+      await new Promise((res) => setTimeout(res, 300)); // delay para no saturar la API
+    }
+    mostrarMensaje("Actualización de incompletos finalizada.");
+    cargarContenidos(); // refresca la lista
+  };
+
   return (
     <>
       <Navbar />
@@ -717,6 +789,43 @@ export default function AdminPanel() {
                   Aplicar
                 </button>
               </div>
+
+              {contenidosIncompletos.length > 0 && (
+                <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-semibold text-yellow-800">
+                      Contenidos incompletos detectados:{" "}
+                      {contenidosIncompletos.length}
+                    </span>
+                    <button
+                      className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                      onClick={handleActualizarIncompletos}
+                    >
+                      Actualizar desde TMDb
+                    </button>
+                  </div>
+                  <ul className="list-disc ml-6 text-yellow-900 text-sm max-h-32 overflow-y-auto">
+                    {contenidosIncompletos.slice(0, 10).map((c) => (
+                      <li key={c.id}>
+                        #{c.id} -{" "}
+                        {c.nombre || (
+                          <span className="italic text-gray-400">
+                            Sin nombre
+                          </span>
+                        )}
+                        <span className="ml-2 text-xs text-yellow-700">
+                          (falta: <strong>{campoFaltante(c)}</strong>)
+                        </span>
+                      </li>
+                    ))}
+                    {contenidosIncompletos.length > 10 && (
+                      <li className="italic text-gray-500">
+                        ...y {contenidosIncompletos.length - 10} más
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )}
 
               <table className="w-full table-auto border-collapse text-sm">
                 <thead>
