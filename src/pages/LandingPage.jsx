@@ -1,5 +1,4 @@
 import { Link, Navigate } from "react-router-dom";
-import { Title, Meta } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import useUsuario from "../hooks/useUsuario";
@@ -15,8 +14,8 @@ export default function LandingPage() {
 
   return (
     <>
-      <Title>My Series Log - Organiza tus series y películas</Title>
-      <Meta
+      <title>My Series Log - Organiza tus series y películas</title>
+      <meta
         name="description"
         content="Organiza, puntúa y sigue tus series y películas favoritas. Descubre novedades, controla episodios vistos y comparte tu catálogo con amigos."
       />

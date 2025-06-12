@@ -1,26 +1,25 @@
-import { StrictMode } from "react";
+import { StrictMode, lazy } from "react";
 import { createRoot } from "react-dom/client";
-import App from "./pages/App.jsx";
 import "./index.css";
 import "@radix-ui/themes/styles.css";
 import { Theme } from "@radix-ui/themes";
-import { BrowserRouter, Routes, Route, HashRouter } from "react-router-dom";
-import Detalle from "./pages/Detalle.jsx";
-import Login from "./pages/Login.jsx";
-import Amigos from "./pages/Amigos.jsx";
-import PerfilAmigo from "./pages/PerfilAmigo.jsx";
-import PreferenciasUsuario from "./pages/PreferenciasUsuario.jsx";
-import AdminPanel from "./pages/AdminPanel.jsx";
-import Dashboard from "./pages/Dashboard.jsx";
-import RedSocial from "./pages/RedSocial.jsx";
-import React from "react";
-import Perfil from "./pages/Perfil.jsx";
-import Pro from "./pages/Pro.jsx";
-import LandingPage from "./pages/LandingPage.jsx";
-import Privacidad from "./pages/Privacidad.jsx";
-import Cookies from "./pages/Cookies.jsx";
-import AvisoLegal from "./pages/AvisoLegal.jsx";
-import Contacto from "./pages/Contacto.jsx";
+import { HashRouter, Routes, Route } from "react-router-dom";
+
+const App = lazy(() => import("./pages/App.jsx"));
+const LandingPage = lazy(() => import("./pages/LandingPage.jsx"));
+const Login = lazy(() => import("./pages/Login.jsx"));
+const Detalle = lazy(() => import("./pages/Detalle.jsx"));
+const PreferenciasUsuario = lazy(() => import("./pages/PreferenciasUsuario.jsx"));
+const PerfilAmigo = lazy(() => import("./pages/PerfilAmigo.jsx"));
+const AdminPanel = lazy(() => import("./pages/AdminPanel.jsx"));
+const Dashboard = lazy(() => import("./pages/Dashboard.jsx"));
+const RedSocial = lazy(() => import("./pages/RedSocial.jsx"));
+const Perfil = lazy(() => import("./pages/Perfil.jsx"));
+const Pro = lazy(() => import("./pages/Pro.jsx"));
+const Privacidad = lazy(() => import("./pages/Privacidad.jsx"));
+const Cookies = lazy(() => import("./pages/Cookies.jsx"));
+const AvisoLegal = lazy(() => import("./pages/AvisoLegal.jsx"));
+const Contacto = lazy(() => import("./pages/Contacto.jsx"));
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
