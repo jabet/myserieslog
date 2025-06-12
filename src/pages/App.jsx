@@ -24,62 +24,102 @@ export default function App() {
   const { proximos, loading: loadingProximos } = useProximasEmisiones(usuario);
   const { proximosEpisodios } = useProximosEpisodiosUsuario(usuario);
 
-  // Memoización de cálculos pesados
+  // Memorización de cálculos pesados
   const hoy = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const idsProximos = useMemo(() => new Set(proximos.map((p) => p.contenido_id)), [proximos]);
-  const conProximos = useMemo(() => catalogo
-    .filter((item) => idsProximos.has(item.id))
-    .map((item) => {
-      const episodiosSerie = proximos.filter((p) => p.contenido_id === item.id);
-      const proximoEpisodio = episodiosSerie
-        .filter((ep) => ep.fecha_emision >= hoy)
-        .sort((a, b) => a.fecha_emision.localeCompare(b.fecha_emision))[0];
-      return { ...item, conProximos: true, proximoEpisodio };
-    }), [catalogo, idsProximos, proximos, hoy]);
+  const idsProximos = useMemo(
+    () => new Set(proximos.map((p) => p.contenido_id)),
+    [proximos]
+  );
+  const conProximos = useMemo(
+    () =>
+      catalogo
+        .filter((item) => idsProximos.has(item.id))
+        .map((item) => {
+          const episodiosSerie = proximos.filter(
+            (p) => p.contenido_id === item.id
+          );
+          const proximoEpisodio = episodiosSerie
+            .filter((ep) => ep.fecha_emision >= hoy)
+            .sort((a, b) => a.fecha_emision.localeCompare(b.fecha_emision))[0];
+          return { ...item, conProximos: true, proximoEpisodio };
+        }),
+    [catalogo, idsProximos, proximos, hoy]
+  );
 
-  const proximosMap = useMemo(() => new Map(
-    proximosEpisodios.map((p) => [
-      p.contenido_id,
-      {
-        temporada: p.temporada,
-        episodio: p.episodio,
-        nombre: p.episodios?.nombre,
-        fecha_emision: p.episodios?.fecha_emision,
-        id: p.episodios?.id,
-      },
-    ])
-  ), [proximosEpisodios]);
+  const proximosMap = useMemo(
+    () =>
+      new Map(
+        proximosEpisodios.map((p) => [
+          p.contenido_id,
+          {
+            temporada: p.temporada,
+            episodio: p.episodio,
+            nombre: p.episodios?.nombre,
+            fecha_emision: p.episodios?.fecha_emision,
+            id: p.episodios?.id,
+          },
+        ])
+      ),
+    [proximosEpisodios]
+  );
 
   // Calcula primero las novedades (conProximos)
-  const viendo = useDeferredValue(useMemo(() => catalogo
-    .filter((item) => item.estado === "viendo" && !idsProximos.has(item.id))
-    .map((item) => {
-      const proximoEpisodio = proximosMap.get(item.id) || null;
-      return { ...item, proximoEpisodio };
-    }), [catalogo, idsProximos, proximosMap]));
+  const viendo = useDeferredValue(
+    useMemo(
+      () =>
+        catalogo
+          .filter(
+            (item) => item.estado === "viendo" && !idsProximos.has(item.id)
+          )
+          .map((item) => {
+            const proximoEpisodio = proximosMap.get(item.id) || null;
+            return { ...item, proximoEpisodio };
+          }),
+      [catalogo, idsProximos, proximosMap]
+    )
+  );
 
-  const idsViendo = useMemo(() => new Set(viendo.map((item) => item.id)), [viendo]);
-  const pendientes = useDeferredValue(useMemo(() => catalogo.filter(
-    (item) =>
-      item.estado === "pendiente" &&
-      !idsProximos.has(item.id) &&
-      !idsViendo.has(item.id)
-  ), [catalogo, idsProximos, idsViendo]));
+  const idsViendo = useMemo(
+    () => new Set(viendo.map((item) => item.id)),
+    [viendo]
+  );
+  const pendientes = useDeferredValue(
+    useMemo(
+      () =>
+        catalogo.filter(
+          (item) =>
+            item.estado === "pendiente" &&
+            !idsProximos.has(item.id) &&
+            !idsViendo.has(item.id)
+        ),
+      [catalogo, idsProximos, idsViendo]
+    )
+  );
 
-  const idsPendientes = useMemo(() => new Set(pendientes.map((item) => item.id)), [pendientes]);
-  const resto = useDeferredValue(useMemo(() => catalogo.filter(
-    (item) =>
-      !idsProximos.has(item.id) &&
-      !idsViendo.has(item.id) &&
-      !idsPendientes.has(item.id)
-  ), [catalogo, idsProximos, idsViendo, idsPendientes]));
+  const idsPendientes = useMemo(
+    () => new Set(pendientes.map((item) => item.id)),
+    [pendientes]
+  );
+  const resto = useDeferredValue(
+    useMemo(
+      () =>
+        catalogo.filter(
+          (item) =>
+            !idsProximos.has(item.id) &&
+            !idsViendo.has(item.id) &&
+            !idsPendientes.has(item.id)
+        ),
+      [catalogo, idsProximos, idsViendo, idsPendientes]
+    )
+  );
 
   return (
     <div className="min-h-screen flex flex-col grid-rows-[auto_1fr_auto]">
       <Navbar />
       <main className="flex-1 pt-20 px-4">
         <div className="flex flex-col md:flex-row gap-8 max-w-7xl mx-auto">
-          <div className="flex-1 min-w-0">
+          {/* Contenido principal */}
+          <div className="flex-1 min-w-0 order-2 md:order-none">
             <Suspense fallback={<div>Cargando filtros...</div>}>
               <FiltrosCatalogo
                 tipos={tiposDisponibles}
@@ -107,9 +147,7 @@ export default function App() {
                       {conProximos.length}
                     </span>
                   </h2>
-                  <Suspense fallback={<div>Cargando catálogo...</div>}>
-                    <CatalogoGrid catalogo={conProximos} />
-                  </Suspense>
+                  <CatalogoGrid catalogo={conProximos} className="lg:h-80" />
                 </SectionContainer>
                 <SectionContainer
                   show={viendo.length > 0}
@@ -121,9 +159,7 @@ export default function App() {
                       {viendo.length}
                     </span>
                   </h2>
-                  <Suspense fallback={<div>Cargando catálogo...</div>}>
-                    <CatalogoGrid catalogo={viendo} />
-                  </Suspense>
+                  <CatalogoGrid catalogo={viendo} />
                 </SectionContainer>
                 <SectionContainer
                   show={pendientes.length > 0}
@@ -135,9 +171,7 @@ export default function App() {
                       {pendientes.length}
                     </span>
                   </h2>
-                  <Suspense fallback={<div>Cargando catálogo...</div>}>
-                    <CatalogoGrid catalogo={pendientes} />
-                  </Suspense>
+                  <CatalogoGrid catalogo={pendientes} className="lg:h-44" />
                 </SectionContainer>
                 <SectionContainer
                   show={resto.length > 0}
@@ -149,17 +183,23 @@ export default function App() {
                       {resto.length}
                     </span>
                   </h2>
-                  <Suspense fallback={<div>Cargando catálogo...</div>}>
-                    <CatalogoGrid catalogo={resto} />
-                  </Suspense>
+                  <CatalogoGrid catalogo={resto} />
                 </SectionContainer>
               </div>
             )}
           </div>
-          <aside className="w-full md:w-80 shrink-0">
-            <Suspense fallback={<div>Cargando próximas emisiones...</div>}>
-              <ProximasEmisiones emisiones={proximos} loading={loadingProximos} />
-            </Suspense>
+          {/* Aside de próximas emisiones */}
+          <aside className="w-full md:w-80 shrink-0 order-1 md:order-none mb-8 md:mb-0">
+            {loadingProximos ? (
+              <SkeletonProximasEmisiones />
+            ) : (
+              <Suspense fallback={<SkeletonProximasEmisiones />}>
+                <ProximasEmisiones
+                  emisiones={proximos}
+                  loading={loadingProximos}
+                />
+              </Suspense>
+            )}
           </aside>
         </div>
       </main>
@@ -211,5 +251,25 @@ function SectionContainer({ show, hasContent, children }) {
     >
       {children}
     </section>
+  );
+}
+
+function SkeletonProximasEmisiones() {
+  return (
+    <aside className="w-full md:w-80 shrink-0 mb-8">
+      <div className="h-6 w-40 bg-gray-200 rounded animate-pulse mb-4"></div>
+      <ul className="space-y-4">
+        {[...Array(5)].map((_, i) => (
+          <li key={i} className="flex items-center gap-3">
+            <div className="w-12 h-16 bg-gray-200 rounded-lg animate-pulse"></div>
+            <div className="flex-1 space-y-2">
+              <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
+              <div className="h-3 bg-gray-100 rounded animate-pulse w-1/2"></div>
+              <div className="h-3 bg-gray-100 rounded animate-pulse w-1/3"></div>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </aside>
   );
 }
