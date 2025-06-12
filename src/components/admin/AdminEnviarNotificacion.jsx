@@ -19,7 +19,7 @@ export default function AdminEnviarNotificacion({
   const [notiSerieId, setNotiSerieId] = useState("");
   const [notiStatus, setNotiStatus] = useState("");
 
-  const userOptions = usuarios.map((u) => (
+  const userOptions = (usuarios || []).map((u) => (
     <option key={u.user_id} value={u.user_id}>
       {u.nick ? u.nick : u.user_id} {u.rol ? `(${u.rol})` : ""}
     </option>
@@ -29,7 +29,7 @@ export default function AdminEnviarNotificacion({
     <option key="" value="">
       Sin imagen de serie
     </option>,
-    ...series.map((s) => (
+    ...(series || []).map((s) => (
       <option key={s.id} value={s.id}>
         {s.nombre} ({s.id})
       </option>
@@ -51,17 +51,15 @@ export default function AdminEnviarNotificacion({
       imagen = serie?.imagen || null;
     }
 
-    const { error } = await supabase
-      .from("notificaciones_usuario")
-      .insert([
-        {
-          user_id: notiUserId,
-          titulo: notiTitulo,
-          mensaje: notiMensaje,
-          url: notiUrl,
-          imagen,
-        },
-      ]);
+    const { error } = await supabase.from("notificaciones_usuario").insert([
+      {
+        user_id: notiUserId,
+        titulo: notiTitulo,
+        mensaje: notiMensaje,
+        url: notiUrl,
+        imagen,
+      },
+    ]);
     if (error) {
       setNotiStatus("Error al enviar: " + error.message);
     } else {
