@@ -5,8 +5,12 @@ import useNotificacionesUsuario from "../hooks/useNotificacionesUsuario";
 import * as Popover from "@radix-ui/react-popover";
 
 export default function NotificacionesBell({ usuario }) {
-  const { notificaciones, refetch } = useNotificacionesUsuario(usuario);
+  const { notificaciones: initialNotificaciones, refetch } =
+    useNotificacionesUsuario(usuario);
   const [open, setOpen] = useState(false);
+  const [loadingBorrar, setLoadingBorrar] = useState(false);
+  const [errorBorrar, setErrorBorrar] = useState("");
+  const [notificaciones, setNotificaciones] = useState(initialNotificaciones);
 
   const noLeidas = notificaciones.filter((n) => !n.leida);
 
@@ -21,6 +25,46 @@ export default function NotificacionesBell({ usuario }) {
   const borrarNotificacion = async (id) => {
     await supabase.from("notificaciones_usuario").delete().eq("id", id);
     refetch();
+  };
+
+  const borrarTodasNotificaciones = async () => {
+    if (!window.confirm("¿Seguro que quieres borrar todas las notificaciones?"))
+      return;
+    setLoadingBorrar(true);
+    setErrorBorrar("");
+    try {
+      const user = await supabase.auth.getUser();
+      const user_id = user.data?.user?.id;
+      if (!user_id) {
+        setErrorBorrar("No se ha encontrado el usuario.");
+        setLoadingBorrar(false);
+        return;
+      }
+      const { error } = await supabase
+        .from("notificaciones_usuario")
+        .delete()
+        .eq("user_id", user_id);
+
+      if (error) {
+        setErrorBorrar("Error al borrar las notificaciones.");
+      } else {
+        setNotificaciones([]);
+      }
+    } catch (err) {
+      setErrorBorrar("Error inesperado al borrar las notificaciones.");
+    }
+    setLoadingBorrar(false);
+  };
+
+  const marcarTodasLeidas = async () => {
+    const ids = noLeidas.map((n) => n.id);
+    if (ids.length > 0) {
+      await supabase
+        .from("notificaciones_usuario")
+        .update({ leida: true })
+        .in("id", ids);
+      refetch();
+    }
   };
 
   return (
@@ -59,6 +103,29 @@ export default function NotificacionesBell({ usuario }) {
               Marcar todas como leídas
             </button>
           )}
+          <div className="flex gap-2 mb-2">
+            <a
+              href="#"
+              className="text-gray-500 cursor-pointer text-xs hover:text-blue-600"
+              onClick={(e) => {
+                e.preventDefault();
+                marcarTodasLeidas();
+              }}
+            >
+              Leer todas
+            </a>
+            <a
+              href="#"
+              className="text-gray-500 cursor-pointer text-xs hover:text-red-600"
+              onClick={(e) => {
+                e.preventDefault();
+                borrarTodasNotificaciones();
+              }}
+            >
+              Borrar todas
+            </a>
+          </div>
+          {errorBorrar && <p className="text-red-500 text-xs">{errorBorrar}</p>}
           <div className="max-h-96 overflow-y-auto">
             {notificaciones.length === 0 ? (
               <p className="text-gray-500 text-sm">No tienes notificaciones.</p>
