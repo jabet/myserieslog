@@ -171,7 +171,7 @@ export default function App() {
                       {pendientes.length}
                     </span>
                   </h2>
-                  <CatalogoGrid catalogo={pendientes} className="lg:h-44" />
+                  <CatalogoGrid catalogo={pendientes} className="lg:h-80" />
                 </SectionContainer>
                 <SectionContainer
                   show={resto.length > 0}
