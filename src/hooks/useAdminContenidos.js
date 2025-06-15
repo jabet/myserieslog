@@ -1,12 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "../utils/supabaseClient";
-
-// Utilidad para formatear fechas (puedes moverla a un util si la usas en más sitios)
-function formatearFecha(fecha) {
-  if (!fecha) return "-";
-  const d = new Date(fecha);
-  return d.toLocaleDateString();
-}
+import { formatearFecha, formatearTiempo } from "../utils/format";
 
 export default function useAdminContenidos(setMensaje) {
   const [contenidos, setContenidos] = useState([]);

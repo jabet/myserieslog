@@ -6,7 +6,8 @@ import {
   calcularProgresoLogro,
 } from "../utils/logros";
 import { supabase } from "../utils/supabaseClient";
-import LogroItem from "./logros/LogroItem";
+import LogroItem from "../components/logros/LogroItem";
+import { formatearFecha, formatearTiempo } from "../../utils/format";
 
 const CATEGORIA_TODOS = "TODOS";
 const ITEMS_POR_PAGINA = 12; // Mostrar 12 por página
@@ -129,14 +130,11 @@ export default function LogrosDetalle({ stats, usuario }) {
       </div>
 
       {/* lista de logros */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid gap-3">
         {mostrar.map((logro) => {
           const conseguido = idsConseguidos.includes(logro.id);
           const ts = conseguido ? getTs(logro.id) : null;
-          const fecha = ts ? new Date(ts).toLocaleDateString() : null;
-
-          // CALCULA EL PORCENTAJE DE ESTE LOGRO
-          const porcentaje = calcularProgresoLogro(logro, stats);
+          const fecha = ts ? formatearFecha(ts) : null; // <-- usa formatearFecha aquí
 
           return (
             <LogroItem
@@ -146,7 +144,7 @@ export default function LogrosDetalle({ stats, usuario }) {
               descripcion={logro.descripcion}
               categoria={logro.categoria}
               fecha={fecha}
-              porcentaje={porcentaje} // <-- pasamos el porcentaje
+              porcentaje={calcularProgresoLogro(logro, stats)}
               color={
                 conseguido
                   ? logro.color

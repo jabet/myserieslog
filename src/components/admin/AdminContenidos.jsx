@@ -1,5 +1,6 @@
 import { useState } from "react";
 import AdminIncompletos from "./AdminIncompletos";
+import { formatearFecha, formatearTiempo } from "../../utils/format";
 
 export default function AdminContenidos({
   contenidos,
@@ -23,7 +24,6 @@ export default function AdminContenidos({
   handleSort,
   sortBy,
   sortIcon,
-  formatearFecha,
   handleRecalcularTipo,
 }) {
   return (
