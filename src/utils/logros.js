@@ -21,7 +21,8 @@ export const LOGROS_DEFINICIONES = [
     emoji: '🎬',
     categoria: CATEGORIAS_LOGROS.COLECCION,
     condicion: (stats) => stats.series?.total >= 1,
-    color: 'bg-blue-50 text-blue-800 border-blue-200'
+    color: 'bg-blue-50 text-blue-800 border-blue-200',
+    meta: { campo: 'series.total', objetivo: 1 }
   },
   {
     id: 'primera_pelicula',
@@ -30,7 +31,8 @@ export const LOGROS_DEFINICIONES = [
     emoji: '🎭',
     categoria: CATEGORIAS_LOGROS.COLECCION,
     condicion: (stats) => stats.peliculas?.total >= 1,
-    color: 'bg-purple-50 text-purple-800 border-purple-200'
+    color: 'bg-purple-50 text-purple-800 border-purple-200',
+    meta: { campo: 'peliculas.total', objetivo: 1 }
   },
   {
     id: 'coleccionista_basico',
@@ -39,7 +41,8 @@ export const LOGROS_DEFINICIONES = [
     emoji: '📚',
     categoria: CATEGORIAS_LOGROS.COLECCION,
     condicion: (stats) => stats.series?.total >= 10,
-    color: 'bg-green-50 text-green-800 border-green-200'
+    color: 'bg-green-50 text-green-800 border-green-200',
+    meta: { campo: 'series.total', objetivo: 10 }
   },
   {
     id: 'cinefilo_basico',
@@ -48,7 +51,8 @@ export const LOGROS_DEFINICIONES = [
     emoji: '🍿',
     categoria: CATEGORIAS_LOGROS.COLECCION,
     condicion: (stats) => stats.peliculas?.total >= 25,
-    color: 'bg-red-50 text-red-800 border-red-200'
+    color: 'bg-red-50 text-red-800 border-red-200',
+    meta: { campo: 'peliculas.total', objetivo: 25 }
   },
   {
     id: 'coleccionista_avanzado',
@@ -57,7 +61,8 @@ export const LOGROS_DEFINICIONES = [
     emoji: '📖',
     categoria: CATEGORIAS_LOGROS.COLECCION,
     condicion: (stats) => stats.series?.total >= 50,
-    color: 'bg-indigo-50 text-indigo-800 border-indigo-200'
+    color: 'bg-indigo-50 text-indigo-800 border-indigo-200',
+    meta: { campo: 'series.total', objetivo: 50 }
   },
   {
     id: 'cinefilo_avanzado',
@@ -66,7 +71,8 @@ export const LOGROS_DEFINICIONES = [
     emoji: '🎞️',
     categoria: CATEGORIAS_LOGROS.COLECCION,
     condicion: (stats) => stats.peliculas?.total >= 100,
-    color: 'bg-yellow-50 text-yellow-800 border-yellow-200'
+    color: 'bg-yellow-50 text-yellow-800 border-yellow-200',
+    meta: { campo: 'peliculas.total', objetivo: 100 }
   },
   {
     id: 'coleccionista_experto',
@@ -75,7 +81,8 @@ export const LOGROS_DEFINICIONES = [
     emoji: '🏛️',
     categoria: CATEGORIAS_LOGROS.COLECCION,
     condicion: (stats) => stats.series?.total >= 100,
-    color: 'bg-purple-50 text-purple-800 border-purple-200'
+    color: 'bg-purple-50 text-purple-800 border-purple-200',
+    meta: { campo: 'series.total', objetivo: 100 }
   },
   {
     id: 'archivista',
@@ -84,7 +91,8 @@ export const LOGROS_DEFINICIONES = [
     emoji: '🗃️',
     categoria: CATEGORIAS_LOGROS.COLECCION,
     condicion: (stats) => (stats.series?.total || 0) + (stats.peliculas?.total || 0) >= 200,
-    color: 'bg-gray-50 text-gray-800 border-gray-200'
+    color: 'bg-gray-50 text-gray-800 border-gray-200',
+    meta: { campo: 'series.total + peliculas.total', objetivo: 200 }
   },
 
 
@@ -96,7 +104,8 @@ export const LOGROS_DEFINICIONES = [
     emoji: '👀',
     categoria: CATEGORIAS_LOGROS.VISUALIZACION,
     condicion: (stats) => stats.episodios?.vistos >= 1,
-    color: 'bg-blue-50 text-blue-800 border-blue-200'
+    color: 'bg-blue-50 text-blue-800 border-blue-200',
+    meta: { campo: 'episodios.vistos', objetivo: 1 }
   },
   {
     id: 'primera_pelicula_vista',
@@ -105,7 +114,8 @@ export const LOGROS_DEFINICIONES = [
     emoji: '🎪',
     categoria: CATEGORIAS_LOGROS.VISUALIZACION,
     condicion: (stats) => stats.peliculas?.vistas >= 1,
-    color: 'bg-pink-50 text-pink-800 border-pink-200'
+    color: 'bg-pink-50 text-pink-800 border-pink-200',
+    meta: { campo: 'peliculas.vistas', objetivo: 1 }
   },
   {
     id: 'maraton_basico',
@@ -114,7 +124,8 @@ export const LOGROS_DEFINICIONES = [
     emoji: '🏃‍♂️',
     categoria: CATEGORIAS_LOGROS.VISUALIZACION,
     condicion: (stats) => stats.episodios?.vistos >= 100,
-    color: 'bg-orange-50 text-orange-800 border-orange-200'
+    color: 'bg-orange-50 text-orange-800 border-orange-200',
+    meta: { campo: 'episodios.vistos', objetivo: 100 }
   },
   {
     id: 'cinefilo_activo',
@@ -123,7 +134,8 @@ export const LOGROS_DEFINICIONES = [
     emoji: '🎬',
     categoria: CATEGORIAS_LOGROS.VISUALIZACION,
     condicion: (stats) => stats.peliculas?.vistas >= 50,
-    color: 'bg-purple-50 text-purple-800 border-purple-200'
+    color: 'bg-purple-50 text-purple-800 border-purple-200',
+    meta: { campo: 'peliculas.vistas', objetivo: 50 }
   },
   {
     id: 'maraton_avanzado',
@@ -132,7 +144,8 @@ export const LOGROS_DEFINICIONES = [
     emoji: '🍿',
     categoria: CATEGORIAS_LOGROS.VISUALIZACION,
     condicion: (stats) => stats.episodios?.vistos >= 500,
-    color: 'bg-red-50 text-red-800 border-red-200'
+    color: 'bg-red-50 text-red-800 border-red-200',
+    meta: { campo: 'episodios.vistos', objetivo: 500 }
   },
   {
     id: 'maraton_extremo',
@@ -141,7 +154,8 @@ export const LOGROS_DEFINICIONES = [
     emoji: '🔥',
     categoria: CATEGORIAS_LOGROS.VISUALIZACION,
     condicion: (stats) => stats.episodios?.vistos >= 1000,
-    color: 'bg-red-50 text-red-900 border-red-300'
+    color: 'bg-red-50 text-red-900 border-red-300',
+    meta: { campo: 'episodios.vistos', objetivo: 1000 }
   },
   {
     id: 'completista',
@@ -150,7 +164,8 @@ export const LOGROS_DEFINICIONES = [
     emoji: '✅',
     categoria: CATEGORIAS_LOGROS.VISUALIZACION,
     condicion: (stats) => stats.series?.vistas >= 5,
-    color: 'bg-green-50 text-green-800 border-green-200'
+    color: 'bg-green-50 text-green-800 border-green-200',
+    meta: { campo: 'series.vistas', objetivo: 5 }
   },
   {
     id: 'completista_avanzado',
@@ -159,7 +174,8 @@ export const LOGROS_DEFINICIONES = [
     emoji: '🎯',
     categoria: CATEGORIAS_LOGROS.VISUALIZACION,
     condicion: (stats) => stats.series?.vistas >= 25,
-    color: 'bg-teal-50 text-teal-800 border-teal-200'
+    color: 'bg-teal-50 text-teal-800 border-teal-200',
+    meta: { campo: 'series.vistas', objetivo: 25 }
   },
   {
     id: 'completista_maestro',
@@ -168,7 +184,8 @@ export const LOGROS_DEFINICIONES = [
     emoji: '👑',
     categoria: CATEGORIAS_LOGROS.VISUALIZACION,
     condicion: (stats) => stats.series?.vistas >= 50,
-    color: 'bg-yellow-50 text-yellow-800 border-yellow-200'
+    color: 'bg-yellow-50 text-yellow-800 border-yellow-200',
+    meta: { campo: 'series.vistas', objetivo: 50 }
   },
 
   // === RACHA ===
@@ -179,7 +196,8 @@ export const LOGROS_DEFINICIONES = [
     emoji: '📅',
     categoria: CATEGORIAS_LOGROS.RACHA,
     condicion: (stats) => stats.racha?.mejor >= 1,
-    color: 'bg-blue-50 text-blue-800 border-blue-200'
+    color: 'bg-blue-50 text-blue-800 border-blue-200',
+    meta: { campo: 'racha.mejor', objetivo: 1 }
   },
   {
     id: 'racha_semanal',
@@ -188,7 +206,8 @@ export const LOGROS_DEFINICIONES = [
     emoji: '🔥',
     categoria: CATEGORIAS_LOGROS.RACHA,
     condicion: (stats) => stats.racha?.mejor >= 7,
-    color: 'bg-red-50 text-red-800 border-red-200'
+    color: 'bg-red-50 text-red-800 border-red-200',
+    meta: { campo: 'racha.mejor', objetivo: 7 }
   },
   {
     id: 'racha_quincenal',
@@ -197,7 +216,8 @@ export const LOGROS_DEFINICIONES = [
     emoji: '💪',
     categoria: CATEGORIAS_LOGROS.RACHA,
     condicion: (stats) => stats.racha?.mejor >= 15,
-    color: 'bg-orange-50 text-orange-800 border-orange-200'
+    color: 'bg-orange-50 text-orange-800 border-orange-200',
+    meta: { campo: 'racha.mejor', objetivo: 15 }
   },
   {
     id: 'racha_mensual',
@@ -206,7 +226,8 @@ export const LOGROS_DEFINICIONES = [
     emoji: '🏆',
     categoria: CATEGORIAS_LOGROS.RACHA,
     condicion: (stats) => stats.racha?.mejor >= 30,
-    color: 'bg-green-50 text-green-800 border-green-200'
+    color: 'bg-green-50 text-green-800 border-green-200',
+    meta: { campo: 'racha.mejor', objetivo: 30 }
   },
   {
     id: 'racha_bimestral',
@@ -215,7 +236,8 @@ export const LOGROS_DEFINICIONES = [
     emoji: '💎',
     categoria: CATEGORIAS_LOGROS.RACHA,
     condicion: (stats) => stats.racha?.mejor >= 60,
-    color: 'bg-blue-50 text-blue-800 border-blue-200'
+    color: 'bg-blue-50 text-blue-800 border-blue-200',
+    meta: { campo: 'racha.mejor', objetivo: 60 }
   },
   {
     id: 'racha_legendaria',
@@ -224,7 +246,8 @@ export const LOGROS_DEFINICIONES = [
     emoji: '🌟',
     categoria: CATEGORIAS_LOGROS.RACHA,
     condicion: (stats) => stats.racha?.mejor >= 100,
-    color: 'bg-yellow-50 text-yellow-800 border-yellow-200'
+    color: 'bg-yellow-50 text-yellow-800 border-yellow-200',
+    meta: { campo: 'racha.mejor', objetivo: 100 }
   },
 
   // === TIEMPO ===
@@ -235,7 +258,8 @@ export const LOGROS_DEFINICIONES = [
     emoji: '⏰',
     categoria: CATEGORIAS_LOGROS.TIEMPO,
     condicion: (stats) => stats.episodios?.tiempoTotal >= 60,
-    color: 'bg-blue-50 text-blue-800 border-blue-200'
+    color: 'bg-blue-50 text-blue-800 border-blue-200',
+    meta: { campo: 'episodios.tiempoTotal', objetivo: 60 }
   },
   {
     id: 'tiempo_dia',
@@ -244,7 +268,8 @@ export const LOGROS_DEFINICIONES = [
     emoji: '📺',
     categoria: CATEGORIAS_LOGROS.TIEMPO,
     condicion: (stats) => stats.episodios?.tiempoTotal >= 1440, // 24 horas en minutos
-    color: 'bg-purple-50 text-purple-800 border-purple-200'
+    color: 'bg-purple-50 text-purple-800 border-purple-200',
+    meta: { campo: 'episodios.tiempoTotal', objetivo: 1440 }
   },
   {
     id: 'tiempo_semana',
@@ -253,7 +278,8 @@ export const LOGROS_DEFINICIONES = [
     emoji: '🗓️',
     categoria: CATEGORIAS_LOGROS.TIEMPO,
     condicion: (stats) => stats.episodios?.tiempoTotal >= 10080, // 1 semana
-    color: 'bg-green-50 text-green-800 border-green-200'
+    color: 'bg-green-50 text-green-800 border-green-200',
+    meta: { campo: 'episodios.tiempoTotal', objetivo: 10080 }
   },
   {
     id: 'tiempo_mes',
@@ -262,7 +288,8 @@ export const LOGROS_DEFINICIONES = [
     emoji: '📅',
     categoria: CATEGORIAS_LOGROS.TIEMPO,
     condicion: (stats) => stats.episodios?.tiempoTotal >= 43200, // 1 mes
-    color: 'bg-yellow-50 text-yellow-800 border-yellow-200'
+    color: 'bg-yellow-50 text-yellow-800 border-yellow-200',
+    meta: { campo: 'episodios.tiempoTotal', objetivo: 43200 }
   },
   {
     id: 'tiempo_año',
@@ -271,7 +298,8 @@ export const LOGROS_DEFINICIONES = [
     emoji: '🎊',
     categoria: CATEGORIAS_LOGROS.TIEMPO,
     condicion: (stats) => stats.episodios?.tiempoTotal >= 525600, // 1 año
-    color: 'bg-red-50 text-red-800 border-red-200'
+    color: 'bg-red-50 text-red-800 border-red-200',
+    meta: { campo: 'episodios.tiempoTotal', objetivo: 525600 }
   },
 
   // === GÉNEROS ===
@@ -282,7 +310,8 @@ export const LOGROS_DEFINICIONES = [
     emoji: '🎭',
     categoria: CATEGORIAS_LOGROS.GENEROS,
     condicion: (stats) => stats.generosFavoritos?.length >= 1,
-    color: 'bg-blue-50 text-blue-800 border-blue-200'
+    color: 'bg-blue-50 text-blue-800 border-blue-200',
+    meta: { campo: 'generosFavoritos.length', objetivo: 1 }
   },
   {
     id: 'explorador_generos',
@@ -291,7 +320,8 @@ export const LOGROS_DEFINICIONES = [
     emoji: '🧭',
     categoria: CATEGORIAS_LOGROS.GENEROS,
     condicion: (stats) => stats.generosFavoritos?.length >= 5,
-    color: 'bg-teal-50 text-teal-800 border-teal-200'
+    color: 'bg-teal-50 text-teal-800 border-teal-200',
+    meta: { campo: 'generosFavoritos.length', objetivo: 5 }
   },
   {
     id: 'conocedor_generos',
@@ -300,7 +330,8 @@ export const LOGROS_DEFINICIONES = [
     emoji: '🎨',
     categoria: CATEGORIAS_LOGROS.GENEROS,
     condicion: (stats) => stats.generosFavoritos?.length >= 10,
-    color: 'bg-indigo-50 text-indigo-800 border-indigo-200'
+    color: 'bg-indigo-50 text-indigo-800 border-indigo-200',
+    meta: { campo: 'generosFavoritos.length', objetivo: 10 }
   },
   {
     id: 'experto_generos',
@@ -309,7 +340,8 @@ export const LOGROS_DEFINICIONES = [
     emoji: '🌈',
     categoria: CATEGORIAS_LOGROS.GENEROS,
     condicion: (stats) => stats.generosFavoritos?.length >= 15,
-    color: 'bg-purple-50 text-purple-800 border-purple-200'
+    color: 'bg-purple-50 text-purple-800 border-purple-200',
+    meta: { campo: 'generosFavoritos.length', objetivo: 15 }
   },
 
   // === ESPECIALES ===
@@ -355,7 +387,8 @@ export const LOGROS_DEFINICIONES = [
       
       return peliculasTerminator.length >= 4;
     },
-    color: 'bg-red-50 text-red-800 border-red-200'
+    color: 'bg-red-50 text-red-800 border-red-200',
+    meta: { campo: 'peliculasVistas.filter(pelicula => pelicula.nombre.includes("terminator")).length', objetivo: 4 }
   },
   {
     id: 'veterano',
@@ -395,7 +428,8 @@ export const LOGROS_DEFINICIONES = [
       
       return peliculasMarvel.length >= 10;
     },
-    color: 'bg-red-50 text-red-800 border-red-200'
+    color: 'bg-red-50 text-red-800 border-red-200',
+    meta: { campo: 'peliculasVistas.filter(p => { const nombre = (p.nombre || "").toLowerCase(); const nombreOriginal = (p.nombre_original || "").toLowerCase(); return palabrasClaveMarvel.some(keyword => nombre.includes(keyword) || nombreOriginal.includes(keyword)); }).length', objetivo: 10 }
   },
   {
     id: 'star_wars_fan',
@@ -412,7 +446,8 @@ export const LOGROS_DEFINICIONES = [
       });
       return peliculasStarWars.length >= 6;
     },
-    color: 'bg-yellow-50 text-yellow-800 border-yellow-200'
+    color: 'bg-yellow-50 text-yellow-800 border-yellow-200',
+    meta: { campo: 'peliculasVistas.filter(p => { const nombre = (p.nombre || "").toLowerCase(); const nombreOriginal = (p.nombre_original || "").toLowerCase(); return nombre.includes("star wars") || nombreOriginal.includes("star wars"); }).length', objetivo: 6 }
   },
   // NUEVO: Logro Trekkie
   {
@@ -434,7 +469,8 @@ export const LOGROS_DEFINICIONES = [
       });
       return contenidoStarTrek.length >= 6;
     },
-    color: 'bg-blue-50 text-blue-800 border-blue-200'
+    color: 'bg-blue-50 text-blue-800 border-blue-200',
+    meta: { campo: 'peliculasVistas.filter(p => { const nombre = (p.nombre || "").toLowerCase(); const nombreOriginal = (p.nombre_original || "").toLowerCase(); return nombre.includes("star trek") || nombreOriginal.includes("star trek"); }).length', objetivo: 6 }
   },
   {
     id: 'fantastic_beasts_fan',
@@ -458,7 +494,8 @@ export const LOGROS_DEFINICIONES = [
         );
       }).length;
     },
-    color: 'bg-green-50 text-green-800 border-green-200'
+    color: 'bg-green-50 text-green-800 border-green-200',
+    meta: { campo: 'peliculasVistas.filter(pelicula => { const nombre = (pelicula.nombre || "").toLowerCase(); const nombreOriginal = (pelicula.nombre_original || "").toLowerCase(); return palabrasClaveFB.some(keyword => nombre.includes(keyword) || nombreOriginal.includes(keyword)); }).length', objetivo: 3 }
   },
   {
     id: 'harry_potter_fan',
@@ -488,7 +525,8 @@ export const LOGROS_DEFINICIONES = [
         );
       }).length;
     },
-    color: 'bg-green-50 text-green-800 border-green-200'
+    color: 'bg-green-50 text-green-800 border-green-200',
+    meta: { campo: 'peliculasVistas.filter(pelicula => { const nombre = (pelicula.nombre || "").toLowerCase(); const nombreOriginal = (pelicula.nombre_original || "").toLowerCase(); return palabrasClaveHP.some(keyword => nombre.includes(keyword) || nombreOriginal.includes(keyword)); }).length', objetivo: 7 }
   },
   {
     id: 'lotr_fan',
@@ -513,7 +551,8 @@ export const LOGROS_DEFINICIONES = [
         );
       }).length;
     },
-    color: 'bg-green-50 text-green-800 border-green-200'
+    color: 'bg-green-50 text-green-800 border-green-200',
+    meta: { campo: 'peliculasVistas.filter(pelicula => { const nombre = (pelicula.nombre || "").toLowerCase(); const nombreOriginal = (pelicula.nombre_original || "").toLowerCase(); return palabrasClaveLOTR.some(keyword => nombre.includes(keyword) || nombreOriginal.includes(keyword)); }).length', objetivo: 3 }
   },
   {
     id: 'flash_fan',
@@ -544,7 +583,8 @@ export const LOGROS_DEFINICIONES = [
         );
       }).length;
     },
-    color: 'bg-green-50 text-green-800 border-green-200'
+    color: 'bg-green-50 text-green-800 border-green-200',
+    meta: { campo: 'peliculasVistas.filter(pelicula => { const nombre = (pelicula.nombre || "").toLowerCase(); const nombreOriginal = (pelicula.nombre_original || "").toLowerCase(); return palabrasClaveFlash.some(keyword => nombre.includes(keyword) || nombreOriginal.includes(keyword)); }).length + seriesVistas.filter(serie => { const nombre = (serie.nombre || "").toLowerCase(); const nombreOriginal = (serie.nombre_original || "").toLowerCase(); return palabrasClaveFlash.some(keyword => nombre.includes(keyword) || nombreOriginal.includes(keyword)); }).length', objetivo: 3 }
   },
   {
     id: 'antman_fan',
@@ -567,7 +607,8 @@ export const LOGROS_DEFINICIONES = [
         );
       }).length;
     },
-    color: 'bg-green-50 text-green-800 border-green-200'
+    color: 'bg-green-50 text-green-800 border-green-200',
+    meta: { campo: 'peliculasVistas.filter(pelicula => { const nombre = (pelicula.nombre || "").toLowerCase(); const nombreOriginal = (pelicula.nombre_original || "").toLowerCase(); return palabrasClaveAntman.some(keyword => nombre.includes(keyword) || nombreOriginal.includes(keyword)); }).length', objetivo: 2 }
   },
   {
     id: 'mutante',
@@ -590,7 +631,8 @@ export const LOGROS_DEFINICIONES = [
         );
       }).length >= 5;
     },
-    color: 'bg-green-50 text-green-800 border-green-200'
+    color: 'bg-green-50 text-green-800 border-green-200',
+    meta: { campo: 'peliculasVistas.filter(pelicula => { const nombre = (pelicula.nombre || "").toLowerCase(); const nombreOriginal = (pelicula.nombre_original || "").toLowerCase(); return palabrasClaveXmen.some(keyword => nombre.includes(keyword) || nombreOriginal.includes(keyword)); }).length + seriesVistas.filter(serie => { const nombre = (serie.nombre || "").toLowerCase(); const nombreOriginal = (serie.nombre_original || "").toLowerCase(); return palabrasClaveXmen.some(keyword => nombre.includes(keyword) || nombreOriginal.includes(keyword)); }).length', objetivo: 5 }
   },
   {
     id: 'hobbit_fan',
@@ -614,7 +656,8 @@ export const LOGROS_DEFINICIONES = [
         );
       }).length >= 3;
     },
-    color: 'bg-yellow-50 text-yellow-800 border-yellow-200'
+    color: 'bg-yellow-50 text-yellow-800 border-yellow-200',
+    meta: { campo: 'peliculasVistas.filter(pelicula => { const nombre = (pelicula.nombre || "").toLowerCase(); const nombreOriginal = (pelicula.nombre_original || "").toLowerCase(); return palabrasClaveHobbit.some(keyword => nombre.includes(keyword) || nombreOriginal.includes(keyword)); }).length', objetivo: 3 }
   },
   {
     id: 'spiderman_fan',
@@ -639,7 +682,8 @@ export const LOGROS_DEFINICIONES = [
         );
       }).length >= 3;
     },
-    color: 'bg-red-50 text-red-800 border-red-200'
+    color: 'bg-red-50 text-red-800 border-red-200',
+    meta: { campo: 'peliculasVistas.filter(pelicula => { const nombre = (pelicula.nombre || "").toLowerCase(); const nombreOriginal = (pelicula.nombre_original || "").toLowerCase(); return palabrasClaveSpiderman.some(keyword => nombre.includes(keyword) || nombreOriginal.includes(keyword)); }).length', objetivo: 3 }
   },
   {
     id: 'got_fan',
@@ -667,7 +711,8 @@ export const LOGROS_DEFINICIONES = [
       // Se considera logrado si la serie tiene 8 temporadas vistas o está marcada como completa
       return serie && (serie.temporadas_vistas >= 8 || serie.completa === true);
     },
-    color: 'bg-gray-50 text-gray-800 border-gray-300'
+    color: 'bg-gray-50 text-gray-800 border-gray-300',
+    meta: { campo: 'seriesVistas.find(serie => { const nombre = (serie.nombre || "").toLowerCase(); const nombreOriginal = (serie.nombre_original || "").toLowerCase(); return palabrasClaveGoT.some(keyword => nombre.includes(keyword) || nombreOriginal.includes(keyword)); }).temporadas_vistas', objetivo: 8 }
   }
 
 ];
@@ -677,12 +722,12 @@ export const LOGROS_DEFINICIONES = [
  * @param {Object} estadisticas - Estadísticas del usuario
  * @returns {Array} Logros desbloqueados
  */
-export function calcularLogrosDesbloqueados(estadisticas) {
-  if (!estadisticas) return [];
+export function calcularLogrosDesbloqueados(stats) {
+  if (!stats) return [];
   
   return LOGROS_DEFINICIONES.filter(logro => {
     try {
-      return logro.condicion(estadisticas);
+      return logro.condicion(stats);
     } catch (error) {
       console.error(`Error evaluando logro ${logro.id}:`, error);
       return false;
@@ -695,15 +740,15 @@ export function calcularLogrosDesbloqueados(estadisticas) {
  * @param {Object} estadisticas - Estadísticas del usuario
  * @returns {Array} Logros próximos con progreso
  */
-export function calcularLogrosProximos(estadisticas) {
-  if (!estadisticas) return [];
+export function calcularLogrosProximos(stats) {
+  if (!stats) return [];
   
-  const desbloqueados = new Set(calcularLogrosDesbloqueados(estadisticas).map(l => l.id));
+  const desbloqueados = new Set(calcularLogrosDesbloqueados(stats).map(l => l.id));
   
   return LOGROS_DEFINICIONES
     .filter(logro => !desbloqueados.has(logro.id))
     .map(logro => {
-      const progreso = calcularProgresoLogro(logro, estadisticas);
+      const progreso = calcularProgresoLogro(logro, stats);
       return { ...logro, progreso };
     })
     .filter(logro => logro.progreso > 0)
@@ -712,198 +757,26 @@ export function calcularLogrosProximos(estadisticas) {
 }
 
 /**
- * Calcula el progreso hacia un logro específico
- * @param {Object} logro - Definición del logro
- * @param {Object} stats - Estadísticas del usuario
- * @returns {number} Porcentaje de progreso (0-100)
+ * Dado un objeto y una ruta “a.b.c”, devuelve obj[a][b][c] o undefined.
  */
-function calcularProgresoLogro(logro, stats) {
-  // Mapeo de logros a sus valores objetivo y actuales
-  const progresoMap = {
-    // COLECCIÓN
-    'primera_serie': { actual: stats.series?.total || 0, objetivo: 1 },
-    'primera_pelicula': { actual: stats.peliculas?.total || 0, objetivo: 1 },
-    'coleccionista_basico': { actual: stats.series?.total || 0, objetivo: 10 },
-    'cinefilo_basico': { actual: stats.peliculas?.total || 0, objetivo: 25 },
-    'coleccionista_avanzado': { actual: stats.series?.total || 0, objetivo: 50 },
-    'cinefilo_avanzado': { actual: stats.peliculas?.total || 0, objetivo: 100 },
-    'coleccionista_experto': { actual: stats.series?.total || 0, objetivo: 100 },
-    'archivista': { 
-      actual: (stats.series?.total || 0) + (stats.peliculas?.total || 0), 
-      objetivo: 200 
-    },
+function getByPath(obj, path) {
+  return path.split('.').reduce((o, key) => o?.[key], obj);
+}
 
-    // VISUALIZACIÓN
-    'primer_episodio': { actual: stats.episodios?.vistos || 0, objetivo: 1 },
-    'primera_pelicula_vista': { actual: stats.peliculas?.vistas || 0, objetivo: 1 },
-    'maraton_basico': { actual: stats.episodios?.vistos || 0, objetivo: 100 },
-    'cinefilo_activo': { actual: stats.peliculas?.vistas || 0, objetivo: 50 },
-    'maraton_avanzado': { actual: stats.episodios?.vistos || 0, objetivo: 500 },
-    'maraton_extremo': { actual: stats.episodios?.vistos || 0, objetivo: 1000 },
-    'completista': { actual: stats.series?.vistas || 0, objetivo: 5 },
-    'completista_avanzado': { actual: stats.series?.vistas || 0, objetivo: 25 },
-    'completista_maestro': { actual: stats.series?.vistas || 0, objetivo: 50 },
+/**
+ * Devuelve el % de progreso de un logro según stats y su meta.
+ * Cada logro en LOGROS_DEFINICIONES debe tener:
+ *   meta: { campo: 'peliculas.vistas', objetivo: 50 }
+ */
+export function calcularProgresoLogro(logro, stats) {
+  const { meta } = logro;
+  if (!meta || !meta.campo || meta.objetivo == null) return 0;
 
-    // RACHA
-    'primera_racha': { actual: stats.racha?.mejor || 0, objetivo: 1 },
-    'racha_semanal': { actual: stats.racha?.mejor || 0, objetivo: 7 },
-    'racha_quincenal': { actual: stats.racha?.mejor || 0, objetivo: 15 },
-    'racha_mensual': { actual: stats.racha?.mejor || 0, objetivo: 30 },
-    'racha_bimestral': { actual: stats.racha?.mejor || 0, objetivo: 60 },
-    'racha_legendaria': { actual: stats.racha?.mejor || 0, objetivo: 100 },
+  const actual = getByPath(stats, meta.campo);
+  if (typeof actual !== 'number') return 0;
 
-    // TIEMPO
-    'tiempo_hora': { actual: stats.episodios?.tiempoTotal || 0, objetivo: 60 },
-    'tiempo_dia': { actual: stats.episodios?.tiempoTotal || 0, objetivo: 1440 },
-    'tiempo_semana': { actual: stats.episodios?.tiempoTotal || 0, objetivo: 10080 },
-    'tiempo_mes': { actual: stats.episodios?.tiempoTotal || 0, objetivo: 43200 },
-    'tiempo_año': { actual: stats.episodios?.tiempoTotal || 0, objetivo: 525600 },
-
-    // GÉNEROS
-    'primer_genero': { actual: stats.generosFavoritos?.length || 0, objetivo: 1 },
-    'explorador_generos': { actual: stats.generosFavoritos?.length || 0, objetivo: 5 },
-    'conocedor_generos': { actual: stats.generosFavoritos?.length || 0, objetivo: 10 },
-    'experto_generos': { actual: stats.generosFavoritos?.length || 0, objetivo: 15 },
-
-    // ESPECIALES
-    'activo_mes': { actual: stats.contenidoNuevoEsteMes || 0, objetivo: 10 },
-    'terminator_saga': {
-      actual: (() => {
-        if (!stats.peliculasVistas || !Array.isArray(stats.peliculasVistas)) {
-          return 0;
-        }
-        
-        return stats.peliculasVistas.filter(pelicula => {
-          const nombre = (pelicula.nombre || '').toLowerCase();
-          const nombreOriginal = (pelicula.nombre_original || '').toLowerCase();
-          return nombre.includes('terminator') || nombreOriginal.includes('terminator');
-        }).length;
-      })(),
-      objetivo: 4
-    },
-    'marvel_fan': {
-      actual: (() => {
-        if (!stats.peliculasVistas || !Array.isArray(stats.peliculasVistas)) {
-          return 0;
-        }
-        
-        const palabrasClaveMarvel = [
-          'iron man', 'avengers', 'captain america', 'thor', 'spider-man',
-          'black widow', 'doctor strange', 'guardians', 'ant-man',
-          'captain marvel', 'black panther', 'hulk', 'hawkeye'
-        ];
-        
-        return stats.peliculasVistas.filter(p => {
-          const nombre = (p.nombre || '').toLowerCase();
-          const nombreOriginal = (p.nombre_original || '').toLowerCase();
-          
-          return palabrasClaveMarvel.some(keyword => 
-            nombre.includes(keyword) || nombreOriginal.includes(keyword)
-          );
-        }).length;
-      })(),
-      objetivo: 10
-    },
-    'star_wars_fan': {
-      actual: (() => {
-        if (!stats.peliculasVistas || !Array.isArray(stats.peliculasVistas)) {
-          return 0;
-        }
-        
-        return stats.peliculasVistas.filter(p => {
-          const nombre = (p.nombre || '').toLowerCase();
-          const nombreOriginal = (p.nombre_original || '').toLowerCase();
-          return nombre.includes('star wars') || nombreOriginal.includes('star wars');
-        }).length;
-      })(),
-      objetivo: 6
-    },
-    'trekkie': {
-      actual: (() => {
-        if (!stats.peliculasVistas || !Array.isArray(stats.peliculasVistas)) {
-          return 0;
-        }
-        return stats.peliculasVistas.filter(p => {
-          const nombre = (p.nombre || '').toLowerCase();
-          const nombreOriginal = (p.nombre_original || '').toLowerCase();
-          return nombre.includes('star trek') || nombreOriginal.includes('star trek');
-        }).length;
-      })(),
-      objetivo: 6
-    },
-    'fantastic_beasts_fan': {
-      actual: (() => {
-        if (!stats.peliculasVistas || !Array.isArray(stats.peliculasVistas)) return 0;
-
-        const palabrasClaveFB = [
-          'animales fantásticos',
-          'fantastic beasts'
-        ];
-
-        return stats.peliculasVistas.filter(pelicula => {
-          const nombre = (pelicula.nombre || '').toLowerCase();
-          const nombreOriginal = (pelicula.nombre_original || '').toLowerCase();
-          return palabrasClaveFB.some(keyword =>
-            nombre.includes(keyword) || nombreOriginal.includes(keyword)
-          );
-        }).length;
-      })(),
-      objetivo: 3
-    },
-    'harry_potter_fan': {
-      actual: (() => {
-        if (!stats.peliculasVistas || !Array.isArray(stats.peliculasVistas)) return 0;
-
-        const palabrasClaveHP = [
-          'harry potter',
-          'la piedra filosofal',
-          'la cámara secreta',
-          'el prisionero de azkaban',
-          'el cáliz de fuego',
-          'la orden del fénix',
-          'el misterio del príncipe',
-          'las reliquias de la muerte'
-        ];
-
-        return stats.peliculasVistas.filter(pelicula => {
-          const nombre = (pelicula.nombre || '').toLowerCase();
-          const nombreOriginal = (pelicula.nombre_original || '').toLowerCase();
-          return palabrasClaveHP.some(keyword =>
-            nombre.includes(keyword) || nombreOriginal.includes(keyword)
-          );
-        }).length;
-      })(),
-      objetivo: 7
-    },
-    'got_fan': {
-      actual: (() => {
-        if (!stats.seriesVistas || !Array.isArray(stats.seriesVistas)) return 0;
-
-        // Busca la serie Juego de Tronos y verifica si tiene 8 temporadas vistas
-        const palabrasClaveGoT = [
-          'juego de tronos',
-          'game of thrones'
-        ];
-
-        const serie = stats.seriesVistas.find(serie => {
-          const nombre = (serie.nombre || '').toLowerCase();
-          const nombreOriginal = (serie.nombre_original || '').toLowerCase();
-          return palabrasClaveGoT.some(keyword =>
-            nombre.includes(keyword) || nombreOriginal.includes(keyword)
-          );
-        });
-
-        // Se considera logrado si la serie tiene 8 temporadas vistas o está marcada como completa
-        return serie && (serie.temporadas_vistas >= 8 || serie.completa === true);
-      })(),
-      objetivo: 8
-    }
-  };
-
-  const progreso = progresoMap[logro.id];
-  if (!progreso) return 0;
-
-  return Math.min(100, Math.round((progreso.actual / progreso.objetivo) * 100));
+  const pct = Math.floor((actual / meta.objetivo) * 100);
+  return pct > 100 ? 100 : pct;
 }
 
 /**
@@ -929,9 +802,9 @@ export function agruparLogrosPorCategoria(logros) {
  * @param {Object} estadisticas - Estadísticas del usuario
  * @returns {Object} Resumen de logros
  */
-export function obtenerEstadisticasLogros(estadisticas) {
-  const desbloqueados = calcularLogrosDesbloqueados(estadisticas);
-  const proximos = calcularLogrosProximos(estadisticas);
+export function obtenerEstadisticasLogros(stats) {
+  const desbloqueados = calcularLogrosDesbloqueados(stats);
+  const proximos = calcularLogrosProximos(stats);
   
   return {
     total: LOGROS_DEFINICIONES.length,

@@ -2,14 +2,23 @@ import { useState, useEffect } from "react";
 import useUsuario from "../hooks/useUsuario";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import { Card } from "@radix-ui/themes";
-import { calcularLogrosUsuario } from "../utils/logrosSupabase";
 import { cargarEstadisticasUsuario } from "../utils/cargarEstadistica";
 import LogrosDetalle from "../components/LogrosDetalle";
-import { supabase } from "../utils/supabaseClient";
+import recalcularYGuardarLogros from "../utils/recalcularYGuardarLogros";
+import {
+  calcularLogrosDesbloqueados,
+  calcularLogrosProximos,
+  obtenerEstadisticasLogros,
+} from "../utils/logros";
+
+function formatearTiempo(minutos) {
+  const horas = Math.floor(minutos / 60);
+  const mins = minutos % 60;
+  return `${horas}h ${mins}min`;
+}
 
 export default function Perfil() {
-  const { usuario, perfil, loading } = useUsuario();
+  const { usuario } = useUsuario();
   const [estadisticas, setEstadisticas] = useState({
     series: { total: 0, viendo: 0, vistas: 0, pendientes: 0 },
     peliculas: { total: 0, vistas: 0, pendientes: 0 },
@@ -22,7 +31,6 @@ export default function Perfil() {
       proximos: [],
       resumen: { total: 0, desbloqueados: 0, porcentaje: 0 },
     },
-    contenidoNuevoEsteMes: 0,
     loading: true,
   });
 
@@ -33,62 +41,34 @@ export default function Perfil() {
   }, [usuario]);
 
   const cargarEstadisticas = async () => {
-    try {
-      setEstadisticas((prev) => ({ ...prev, loading: true }));
+    setEstadisticas((prev) => ({ ...prev, loading: true }));
+    // 1) Trae todas tus stats reales
+    const estadisticasCompletas = await cargarEstadisticasUsuario(usuario.id);
 
-      // Usa la función centralizada para cargar estadísticas
-      const estadisticasCompletas = await cargarEstadisticasUsuario(usuario.id);
-
-      // Calcula los logros usando las estadísticas completas
-      const logros = await calcularLogrosUsuario(
-        usuario.id,
-        estadisticasCompletas
-      );
-
-      setEstadisticas({
-        ...estadisticasCompletas,
-        logros,
-        loading: false,
-      });
-    } catch (error) {
-      console.error("Error cargando estadísticas:", error);
-      setEstadisticas((prev) => ({ ...prev, loading: false }));
-    }
-  };
-
-  const formatearTiempo = (minutos) => {
-    const horas = Math.floor(minutos / 60);
-    const dias = Math.floor(horas / 24);
-
-    if (dias > 0) {
-      return `${dias}d ${horas % 24}h`;
-    } else if (horas > 0) {
-      return `${horas}h ${minutos % 60}m`;
-    } else {
-      return `${minutos}m`;
-    }
-  };
-
-  if (estadisticas.loading || loading) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <Navbar />
-        <main className="flex-1 pt-20 px-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="animate-pulse">
-              <div className="h-8 bg-gray-200 rounded w-1/3 mb-8"></div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[...Array(8)].map((_, i) => (
-                  <div key={i} className="h-32 bg-gray-200 rounded"></div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </main>
-        <Footer />
-      </div>
+    // 2) Calcula logros (frontend)
+    const logrosDesbloqueados = calcularLogrosDesbloqueados(
+      estadisticasCompletas
     );
-  }
+    const logrosProximos = calcularLogrosProximos(estadisticasCompletas);
+    const resumenLogros = obtenerEstadisticasLogros(estadisticasCompletas);
+
+    // 3) Guarda en estado local
+    setEstadisticas({
+      ...estadisticasCompletas,
+      logros: {
+        desbloqueados: logrosDesbloqueados,
+        proximos: logrosProximos,
+        resumen: resumenLogros,
+      },
+      loading: false,
+    });
+
+    // 4) Recalcula Y guarda en Supabase
+    recalcularYGuardarLogros(usuario, {
+      ...estadisticasCompletas,
+      logros: { desbloqueados: logrosDesbloqueados },
+    });
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -106,7 +86,7 @@ export default function Perfil() {
           {/* Estadísticas principales */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {/* Series */}
-            <Card className="p-6">
+            <div className="p-6 bg-white rounded-lg shadow">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Series</h3>
                 <span className="text-2xl">📺</span>
@@ -137,10 +117,10 @@ export default function Perfil() {
                   </span>
                 </div>
               </div>
-            </Card>
+            </div>
 
             {/* Películas */}
-            <Card className="p-6">
+            <div className="p-6 bg-white rounded-lg shadow">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">
                   Películas
@@ -175,10 +155,10 @@ export default function Perfil() {
                   </div>
                 )}
               </div>
-            </Card>
+            </div>
 
             {/* Episodios */}
-            <Card className="p-6">
+            <div className="p-6 bg-white rounded-lg shadow">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">
                   Episodios
@@ -199,10 +179,10 @@ export default function Perfil() {
                   </span>
                 </div>
               </div>
-            </Card>
+            </div>
 
             {/* Racha */}
-            <Card className="p-6">
+            <div className="p-6 bg-white rounded-lg shadow">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Racha</h3>
                 <span className="text-2xl">🔥</span>
@@ -221,15 +201,17 @@ export default function Perfil() {
                   </span>
                 </div>
               </div>
-            </Card>
+            </div>
           </div>
 
-          {/* Logros: solo el componente modular */}
-          <LogrosDetalle logros={estadisticas.logros} />
+          {/* Logros: pasa las estadísticas completas al componente */}
+          <section className="mb-8">
+            <LogrosDetalle stats={estadisticas} usuario={usuario} />
+          </section>
 
           {/* Géneros favoritos */}
           {estadisticas.generosFavoritos.length > 0 && (
-            <Card className="p-6 mb-8">
+            <div className="p-6 bg-white rounded-lg shadow mb-8">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Géneros Favoritos
               </h3>
@@ -267,11 +249,11 @@ export default function Perfil() {
                   )
                 )}
               </div>
-            </Card>
+            </div>
           )}
 
           {/* Actividad reciente */}
-          <Card className="p-6">
+          <div className="p-6 bg-white rounded-lg shadow">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               Actividad de Este Mes
             </h3>
@@ -298,7 +280,7 @@ export default function Perfil() {
                 <p className="text-sm text-purple-700">Logros próximos</p>
               </div>
             </div>
-          </Card>
+          </div>
         </div>
       </main>
       <Footer />

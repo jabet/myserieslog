@@ -1,7 +1,7 @@
 // src/pages/Dashboard.jsx
 import { useEffect, useState } from "react";
 import { supabase } from "../utils/supabaseClient";
-import  useUsuario  from "../hooks/useUsuario";
+import useUsuario from "../hooks/useUsuario";
 import useProximasEmisiones from "../hooks/useProximasEmisiones";
 import ProximasEmisiones from "../components/ProximasEmisiones";
 import {
@@ -72,13 +72,19 @@ export default function Dashboard() {
       });
 
     // 3) Total de usuarios
-    supabase
-      .from("usuarios")
-      .select("id", { head: true, count: "exact" })
-      .then(({ count, error }) => {
-        if (error) return console.error("Error usuarios:", error);
-        setTotalUsuarios(count || 0);
-      });
+    async function fetchUsuarios() {
+      // 1) Si sólo quieres el count:
+      const { count, error } = await supabase
+        .from("usuarios")
+        .select("user_id", { count: "exact" }); 
+
+      if (error) {
+        console.error("Error usuarios:", error);
+      } else {
+        setTotalUsuarios(count ?? 0);
+      }
+    }
+    fetchUsuarios();
   }, []);
 
   return (

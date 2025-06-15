@@ -15,6 +15,7 @@ import useCatalogoUsuario from "../hooks/useCatalogoUsuario";
 import AvisoLimitePlan from "../components/AvisoLimitePlan";
 import { obtenerLogrosRecientes } from "../utils/logros";
 import { notificarLogroDesbloqueado } from "../utils/notificaciones";
+import { comprobarYMarcarLogros } from "../utils/comprobarYMarcarLogros"; // Asegúrate de importar
 // Importa los componentes agrupados
 import { DetalleHeader, DetallePlataformas } from "../components/detalle";
 
@@ -201,9 +202,6 @@ export default function Detalle() {
         await guardarContenidoTMDb(id, media_type, "es-ES");
       }
 
-      // 1. Obtener stats antes de añadir
-      const estadisticasAntes = await obtenerStats();
-
       await supabase.from("catalogo_usuario").insert([
         {
           user_id: usuario.id,
@@ -214,14 +212,11 @@ export default function Detalle() {
         },
       ]);
 
-      // 2. Obtener stats después de añadir
-      const estadisticasAhora = await obtenerStats();
-
-      // 3. Calcular logros recién desbloqueados
-      const nuevosLogros = obtenerLogrosRecientes(
-        estadisticasAntes,
-        estadisticasAhora
-      );
+      // --- NUEVO: Comprobar y marcar logros tras añadir al catálogo ---
+      // Obtén las estadísticas actualizadas del usuario
+      const stats = await obtenerStats();
+      // Comprueba y marca los logros conseguidos, y notifica
+      const nuevosLogros = await comprobarYMarcarLogros(stats, usuario.id);
       for (const logro of nuevosLogros) {
         await notificarLogroDesbloqueado(usuario.id, logro);
       }

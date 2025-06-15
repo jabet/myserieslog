@@ -7,21 +7,20 @@ export default function LogroItem({
   categoria,
   color,
   descripcion,
+  porcentaje = 0, // <-- nuevo prop
+  conseguido = false,
 }) {
   return (
-    <div
-      className={`p-4 rounded-lg border flex items-start gap-3 ${color}`}
-      title={descripcion}
-    >
-      <span className="text-2xl">{emoji}</span>
-      <div className="flex-1">
-        <h5 className="font-medium">{nombre}</h5>
-        <p className="text-xs text-gray-500 mb-1">{categoria}</p>
-        {fecha && (
-          <span className="text-xs text-gray-400 block">
-            {new Date(fecha).toLocaleDateString()}
-          </span>
-        )}
+    <div className={`p-4 rounded-lg border ${color}`}>
+      <div className="flex items-center justify-between">
+        <div className="text-2xl">{emoji}</div>
+        {fecha && <div className="text-xs text-gray-500">{fecha}</div>}
+      </div>
+      <h3 className="mt-2 text-lg font-semibold">{nombre}</h3>
+      <p className="text-sm text-gray-600">{descripcion}</p>
+      {/* MUESTRA EL PORCENTAJE */}
+      <div className="mt-2 text-sm">
+        Progreso: <span className="font-medium">{porcentaje}%</span>
       </div>
     </div>
   );
